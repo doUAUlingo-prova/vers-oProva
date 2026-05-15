@@ -125,7 +125,7 @@ export default function Dashboard() {
       {
         level: "Fácil",
         color: "#58cc02",
-        route: "/expochalenge/facil",
+        route: "/expochalenge/facil?id=4",
         challenges: [
           {
             id: 4,
@@ -144,7 +144,7 @@ export default function Dashboard() {
       {
         level: "Médio",
         color: "#ffb020",
-        route: "/expochalenge/medio",
+        route: "/expochalenge/medio?id=5",
         challenges: [
           {
             id: 5,
@@ -163,14 +163,14 @@ export default function Dashboard() {
       {
         level: "Difícil",
         color: "#ff4b4b",
-        route: "/expochalenge/dificil",
+        route: "/expochalenge/dificil?id=6",
         challenges: [
           {
             id: 6,
             title: "Consumindo API no Expo",
             xp: 200,
             emoji: "⚡",
-            blocked: true,
+            blocked: false,
             topics: [
               "Entenda fetch, axios e useEffect.",
               "Aprenda como exibir dados vindos de uma API.",
