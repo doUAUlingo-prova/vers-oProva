@@ -66,10 +66,6 @@ export default function LoginPage() {
 
           <Text style={styles.title}>Entrar na sua conta</Text>
 
-          <Text style={styles.subtitle}>
-            Acompanhe seu Toyota de forma simples e divertida
-          </Text>
-
           <TextInput
             placeholder="seu@email.com"
             placeholderTextColor="#9ca3af"

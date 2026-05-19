@@ -35,14 +35,6 @@ export default function LandingPage() {
             />
           </View>
 
-          <Text style={styles.title}>
-            Acompanhe seu Toyota de forma simples e divertida
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Veja o status do seu veículo, agende a retirada e acompanhe tudo em
-            um só app.
-          </Text>
 
           <TouchableOpacity
             style={styles.primaryButton}
