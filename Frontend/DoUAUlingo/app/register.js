@@ -65,9 +65,6 @@ export default function RegisterPage() {
 
           <Text style={styles.title}>Criar sua conta</Text>
 
-          <Text style={styles.subtitle}>
-            Cadastre-se para acompanhar seu Toyota pelo app
-          </Text>
 
           <TextInput
             placeholder="Seu nome"
@@ -87,13 +84,6 @@ export default function RegisterPage() {
             autoCapitalize="none"
           />
 
-          <TextInput
-            placeholder="Modelo do veículo"
-            placeholderTextColor="#9ca3af"
-            value={vehicle}
-            onChangeText={setVehicle}
-            style={styles.input}
-          />
 
           <TextInput
             placeholder="Sua senha"
