@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -11,24 +11,18 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "../contexts/AuthContext";
 
+import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const { login, isAuthenticated } = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace("/(tabs)/dashboard");
-    }
-  }, [isAuthenticated]);
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError("");
 
     if (!email || !password) {
@@ -36,8 +30,13 @@ export default function LoginPage() {
       return;
     }
 
-    login(email, password);
-    router.replace("/(tabs)/dashboard");
+    const result = await login(email, password);
+
+    if (result.success) {
+      router.replace("/(tabs)/dashboard");
+    } else {
+      setError(result.message || "E-mail ou senha inválidos.");
+    }
   };
 
   return (
@@ -55,14 +54,14 @@ export default function LoginPage() {
         </View>
 
         <View style={styles.card}>
-  <View style={styles.logoCircle}>
-    <Image
-      source={{
-        uri: "https://static.vecteezy.com/system/resources/previews/068/873/860/non_2x/capybara-wearing-graduation-cap-looks-intelligent-and-proud-symbolizing-achievement-and-education-this-charming-animal-captures-essence-of-celebration-and-success-png.png",
-      }}
-      style={styles.logoImage}
-    />
-  </View>
+          <View style={styles.logoCircle}>
+            <Image
+              source={{
+                uri: "https://static.vecteezy.com/system/resources/previews/068/873/860/non_2x/capybara-wearing-graduation-cap-looks-intelligent-and-proud-symbolizing-achievement-and-education-this-charming-animal-captures-essence-of-celebration-and-success-png.png",
+              }}
+              style={styles.logoImage}
+            />
+          </View>
 
           <Text style={styles.title}>Entrar na sua conta</Text>
 
@@ -87,7 +86,10 @@ export default function LoginPage() {
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleSubmit}
+          >
             <Text style={styles.primaryText}>ENTRAR</Text>
           </TouchableOpacity>
 
@@ -171,15 +173,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#3c3c3c",
     textAlign: "center",
-  },
-
-  subtitle: {
-    fontSize: 16,
-    color: "#777",
-    textAlign: "center",
-    marginTop: 10,
-    marginBottom: 28,
-    lineHeight: 23,
+    marginBottom: 24,
   },
 
   input: {

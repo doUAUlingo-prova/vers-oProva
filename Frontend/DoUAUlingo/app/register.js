@@ -15,18 +15,16 @@ import {
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [vehicle, setVehicle] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [error, setError] = useState("");
-
   const router = useRouter();
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     setError("");
 
-    if (!name || !email || !vehicle || !password || !confirmPassword) {
+    if (!name || !email || !password || !confirmPassword) {
       setError("Preencha todos os campos.");
       return;
     }
@@ -36,7 +34,31 @@ export default function RegisterPage() {
       return;
     }
 
-    router.replace("/login");
+    try {
+      const response = await fetch("http://192.168.1.20:8080/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nome: name,
+          email: email,
+          senha: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || "Erro ao cadastrar.");
+        return;
+      }
+
+      router.replace("/login");
+    } catch (error) {
+      setError("Erro ao conectar com o servidor.");
+      console.log(error);
+    }
   };
 
   return (
@@ -65,7 +87,6 @@ export default function RegisterPage() {
 
           <Text style={styles.title}>Criar sua conta</Text>
 
-
           <TextInput
             placeholder="Seu nome"
             placeholderTextColor="#9ca3af"
@@ -83,7 +104,6 @@ export default function RegisterPage() {
             keyboardType="email-address"
             autoCapitalize="none"
           />
-
 
           <TextInput
             placeholder="Sua senha"
@@ -182,15 +202,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#3c3c3c",
     textAlign: "center",
-  },
-
-  subtitle: {
-    fontSize: 16,
-    color: "#777",
-    textAlign: "center",
-    marginTop: 10,
-    marginBottom: 24,
-    lineHeight: 23,
+    marginBottom: 20,
   },
 
   input: {
