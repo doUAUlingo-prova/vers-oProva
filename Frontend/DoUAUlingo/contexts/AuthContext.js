@@ -2,8 +2,7 @@ import React, { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext();
 
-const API_URL = "http://localhost:8080";
-
+const API_URL = "http://54.147.53.129:8080";
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState(null);

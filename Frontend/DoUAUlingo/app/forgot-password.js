@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 
-const API_URL = "http://localhost:8080";
+const API_URL = "http://54.147.53.129:8080";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();

@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 
-const API_URL = "http://localhost:8080";
+const API_URL = "http://54.147.53.129:8080";
 
 export default function ConquistaPage() {
   const { theme } = useTheme();
