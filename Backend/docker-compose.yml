@@ -2,14 +2,17 @@ services:
   postgres:
     image: postgres:16
     container_name: douaulingo_postgres
+
     environment:
-      POSTGRES_DB: douaulingo_db
+      POSTGRES_DB: douaulingo
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+
     ports:
       - "5434:5432"
+
     volumes:
-      - douaulingo_pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  douaulingo_pgdata:
+  postgres_data:

@@ -1,3 +1,5 @@
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -7,18 +9,22 @@ import {
   View,
 } from "react-native";
 
-import { useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAvatar } from "../../contexts/AvatarContext";
 import { useTheme } from "../../contexts/ThemeContext";
 
 import capivara from "../../assets/avatars/capivara.webp";
 
+const API_URL = "http://localhost:8080";
+
 export default function Profile() {
-  const { user, logout } = useAuth();
+  const { usuario, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { selectedAnimal, setSelectedAnimal } = useAvatar();
+
   const router = useRouter();
+
+  const [perfil, setPerfil] = useState(null);
 
   const animals = [
     { id: "owl", emoji: "🦉" },
@@ -32,17 +38,86 @@ export default function Profile() {
     { id: "capybara", image: capivara },
   ];
 
+  useEffect(() => {
+    carregarPerfil();
+  }, []);
+
+  const carregarPerfil = async () => {
+    if (!usuario?.email) return;
+
+    try {
+      const response = await fetch(
+        `${API_URL}/usuarios/me?email=${usuario.email}`
+      );
+
+      const data = await response.json();
+
+      setPerfil(data);
+
+      if (data.avatar) {
+        setSelectedAnimal(data.avatar);
+      }
+    } catch (error) {
+      console.log("Erro ao carregar perfil:", error);
+    }
+  };
+
+  const atualizarAvatar = async (avatar) => {
+  if (!perfil?.email && !usuario?.email) return;
+
+  const emailUsuario = perfil?.email || usuario?.email;
+
+  try {
+    setSelectedAnimal(avatar);
+
+    const response = await fetch(
+      `${API_URL}/usuarios/avatar?email=${emailUsuario}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              avatar,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        setPerfil((perfilAnterior) => ({
+          ...perfilAnterior,
+          ...data,
+          avatar,
+        }));
+      } catch (error) {
+        console.log("Erro ao atualizar avatar:", error);
+      }
+    };
+
   const stats = [
-    { label: "Dias seguidos", value: "7", emoji: "🔥" },
-    { label: "XP total", value: "820", emoji: "⭐" },
-    { label: "Nível", value: "4", emoji: "🏆" },
+    {
+      label: "Dias seguidos",
+      value: perfil?.streak || 0,
+      emoji: "🔥",
+    },
+    {
+      label: "XP total",
+      value: perfil?.xp || 0,
+      emoji: "⭐",
+    },
+    {
+      label: "Nível",
+      value: perfil?.nivel || 1,
+      emoji: "🏆",
+    },
   ];
 
-  const achievements = [
-    { title: "Primeira lição", emoji: "📚" },
-    { title: "Sequência inicial", emoji: "🔥" },
-    { title: "Aluno dedicado", emoji: "💚" },
-  ];
+  const achievements =
+    perfil?.conquistas?.split(",").map((item) => ({
+      title: item.trim(),
+      emoji: "🏅",
+    })) || [];
 
   const handleLogout = () => {
     logout();
@@ -78,15 +153,17 @@ export default function Profile() {
         <View style={styles.avatarCircle}>{renderSelectedAvatar()}</View>
 
         <Text style={[styles.userName, { color: theme.text }]}>
-          {user?.name || "Usuário"}
+          {perfil?.nome?.split(" ")[0] || "Usuário"}
         </Text>
 
         <Text style={[styles.userEmail, { color: theme.subtext }]}>
-          {user?.email || "usuario@email.com"}
+          {perfil?.email || "usuario@email.com"}
         </Text>
 
         <View style={styles.levelBadge}>
-          <Text style={styles.levelText}>Nível 4</Text>
+          <Text style={styles.levelText}>
+            Nível {perfil?.nivel || 1}
+          </Text>
         </View>
       </View>
 
@@ -103,7 +180,7 @@ export default function Profile() {
                 styles.animalButton,
                 selectedAnimal === animal.id && styles.selectedAnimal,
               ]}
-              onPress={() => setSelectedAnimal(animal.id)}
+              onPress={() => atualizarAvatar(animal.id)}
             >
               {animal.image ? (
                 <Image source={animal.image} style={styles.animalImage} />
@@ -139,15 +216,21 @@ export default function Profile() {
           Conquistas
         </Text>
 
-        {achievements.map((item) => (
-          <View key={item.title} style={styles.achievementItem}>
-            <Text style={styles.achievementEmoji}>{item.emoji}</Text>
+        {achievements.length > 0 ? (
+          achievements.map((item) => (
+            <View key={item.title} style={styles.achievementItem}>
+              <Text style={styles.achievementEmoji}>{item.emoji}</Text>
 
-            <Text style={[styles.achievementText, { color: theme.text }]}>
-              {item.title}
-            </Text>
-          </View>
-        ))}
+              <Text style={[styles.achievementText, { color: theme.text }]}>
+                {item.title}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <Text style={[styles.emptyText, { color: theme.subtext }]}>
+            Nenhuma conquista ainda.
+          </Text>
+        )}
       </View>
 
       <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
@@ -372,6 +455,11 @@ const styles = StyleSheet.create({
   achievementText: {
     fontSize: 15,
     fontWeight: "800",
+  },
+
+  emptyText: {
+    fontSize: 14,
+    fontWeight: "700",
   },
 
   optionButton: {

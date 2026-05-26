@@ -16,8 +16,8 @@ public class UsuarioController {
     @GetMapping("/me")
     public Usuario me(@RequestParam String email) {
 
-        return usuarioRepository
-                .findByEmail(email)
-                .orElseThrow();
+        return usuarioRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new RuntimeException("Usuário não encontrado"));
     }
 }

@@ -33,7 +33,10 @@ export const AuthProvider = ({ children }) => {
       }
 
       setToken(data.token);
-      setUsuario(data.usuario || null);
+      setUsuario(data.usuario || data.user || {
+        email: email,
+        nome: data.nome || "Usuário",
+      });
       setIsAuthenticated(true);
 
       return {

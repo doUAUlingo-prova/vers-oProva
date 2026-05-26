@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -8,22 +9,24 @@ import {
   View,
 } from "react-native";
 
-import { useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAvatar } from "../../contexts/AvatarContext";
 import { useTheme } from "../../contexts/ThemeContext";
 
 import capivara from "../../assets/avatars/capivara.webp";
 
+const API_URL = "http://localhost:8080";
+
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { usuario } = useAuth();
   const { theme } = useTheme();
   const { selectedAnimal } = useAvatar();
   const router = useRouter();
 
   const [selectedTab, setSelectedTab] = useState("AWS");
-
-  const progress = 50;
+  const [perfil, setPerfil] = useState(null);
+  const [progresso, setProgresso] = useState([]);
+  const [progress, setProgress] = useState(0);
 
   const avatarMap = {
     owl: "🦉",
@@ -35,7 +38,6 @@ export default function Dashboard() {
     monkey: "🐵",
     koala: "🐨",
     capybara: capivara,
-
     "🦉": "🦉",
     "🐱": "🐱",
     "🐶": "🐶",
@@ -44,20 +46,6 @@ export default function Dashboard() {
     "🐸": "🐸",
     "🐵": "🐵",
     "🐨": "🐨",
-  };
-
-  const renderAvatar = () => {
-    const avatar = avatarMap[selectedAnimal] || "🦉";
-
-    if (typeof avatar === "string") {
-      return <Text style={styles.avatarEmoji}>{avatar}</Text>;
-    }
-
-    return <Image source={avatar} style={styles.avatarImage} />;
-  };
-
-  const startLevel = (route) => {
-    router.push(route);
   };
 
   const challengeSections = {
@@ -182,6 +170,81 @@ export default function Dashboard() {
     ],
   };
 
+  useEffect(() => {
+    carregarDados();
+
+    const interval = setInterval(() => {
+      carregarDados();
+    }, 2000);
+
+    return () => clearInterval(interval);
+
+  }, [usuario]);
+
+  const carregarDados = async () => {
+    if (!usuario?.email) return;
+
+    try {
+      const perfilResponse = await fetch(
+        `${API_URL}/usuarios/me?email=${usuario.email}`
+      );
+
+      const perfilData = await perfilResponse.json();
+      setPerfil(perfilData);
+
+      const progressoResponse = await fetch(
+        `${API_URL}/progresso?email=${usuario.email}`
+      );
+
+      const progressoData = await progressoResponse.json();
+      setProgresso(progressoData);
+
+      const totalDesafios = 6;
+      const concluidos = progressoData.length;
+      const porcentagem = Math.floor((concluidos / totalDesafios) * 100);
+
+      setProgress(porcentagem);
+    } catch (error) {
+      console.log("Erro ao carregar dados:", error);
+    }
+  };
+
+  const desafioConcluido = (id) => {
+    return progresso.some((item) => item.desafio?.id === id);
+  };
+
+  const renderAvatar = () => {
+    const avatar = avatarMap[selectedAnimal] || "🦉";
+
+    if (typeof avatar === "string") {
+      return <Text style={styles.avatarEmoji}>{avatar}</Text>;
+    }
+
+    return <Image source={avatar} style={styles.avatarImage} />;
+  };
+
+  const startLevel = async (route, challengeId) => {
+    if (!usuario?.email || !challengeId) {
+      router.push(route);
+      return;
+    }
+
+    try {
+      await fetch(
+        `${API_URL}/progresso/concluir?email=${usuario.email}&desafioId=${challengeId}`,
+        {
+          method: "POST",
+        }
+      );
+
+      await carregarDados();
+    } catch (error) {
+      console.log("Erro ao salvar progresso:", error);
+    }
+
+    router.push(route);
+  };
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
@@ -192,7 +255,7 @@ export default function Dashboard() {
           <Text style={styles.logoText}>doUAUlingo</Text>
 
           <Text style={[styles.welcome, { color: theme.text }]}>
-            Olá, {user?.name || "Usuário"} 👋
+            Olá, {perfil?.nome?.split(" ")[0] || "Usuário"} 👋
           </Text>
 
           <Text style={[styles.subtitle, { color: theme.subtext }]}>
@@ -237,19 +300,25 @@ export default function Dashboard() {
       <View style={styles.statsRow}>
         <View style={[styles.statCard, { backgroundColor: theme.card }]}>
           <Text style={styles.statEmoji}>🔥</Text>
-          <Text style={[styles.statNumber, { color: theme.text }]}>7</Text>
+          <Text style={[styles.statNumber, { color: theme.text }]}>
+            {perfil?.streak || 0}
+          </Text>
           <Text style={[styles.statLabel, { color: theme.subtext }]}>dias</Text>
         </View>
 
         <View style={[styles.statCard, { backgroundColor: theme.card }]}>
           <Text style={styles.statEmoji}>⭐</Text>
-          <Text style={[styles.statNumber, { color: theme.text }]}>820</Text>
+          <Text style={[styles.statNumber, { color: theme.text }]}>
+            {perfil?.xp || 0}
+          </Text>
           <Text style={[styles.statLabel, { color: theme.subtext }]}>XP</Text>
         </View>
 
         <View style={[styles.statCard, { backgroundColor: theme.card }]}>
           <Text style={styles.statEmoji}>🏆</Text>
-          <Text style={[styles.statNumber, { color: theme.text }]}>4</Text>
+          <Text style={[styles.statNumber, { color: theme.text }]}>
+            {perfil?.nivel || 1}
+          </Text>
           <Text style={[styles.statLabel, { color: theme.subtext }]}>
             nível
           </Text>
@@ -305,6 +374,7 @@ export default function Dashboard() {
                 styles.challengeCard,
                 { backgroundColor: theme.card },
                 challenge.blocked && styles.challengeBlocked,
+                desafioConcluido(challenge.id) && styles.challengeDone,
               ]}
             >
               <View style={styles.challengeIcon}>
@@ -316,7 +386,11 @@ export default function Dashboard() {
                   {challenge.title}
                 </Text>
 
-                <Text style={styles.challengeXP}>+{challenge.xp} XP</Text>
+                <Text style={styles.challengeXP}>
+                  {desafioConcluido(challenge.id)
+                    ? "Concluído"
+                    : `+${challenge.xp} XP`}
+                </Text>
 
                 <View style={styles.topicsBox}>
                   {challenge.topics.map((topic, index) => (
@@ -340,11 +414,16 @@ export default function Dashboard() {
                 style={[
                   styles.playButton,
                   challenge.blocked && styles.playButtonBlocked,
+                  desafioConcluido(challenge.id) && styles.playButtonDone,
                 ]}
-                onPress={() => startLevel(levelData.route)}
+                onPress={() => startLevel(levelData.route, challenge.id)}
               >
                 <Text style={styles.playButtonText}>
-                  {challenge.blocked ? "🔒" : "▶"}
+                  {desafioConcluido(challenge.id)
+                    ? "✓"
+                    : challenge.blocked
+                    ? "🔒"
+                    : "▶"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -354,7 +433,12 @@ export default function Dashboard() {
 
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() => startLevel(challengeSections[selectedTab][0].route)}
+        onPress={() =>
+          startLevel(
+            challengeSections[selectedTab][0].route,
+            challengeSections[selectedTab][0].challenges[0].id
+          )
+        }
       >
         <Text style={styles.primaryText}>INICIAR LIÇÃO</Text>
       </TouchableOpacity>
@@ -558,6 +642,11 @@ const styles = StyleSheet.create({
     borderBottomColor: "#d1d1d1",
   },
 
+  challengeDone: {
+    borderColor: "#58cc02",
+    borderBottomColor: "#46a302",
+  },
+
   challengeBlocked: {
     opacity: 0.55,
   },
@@ -618,6 +707,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 4,
     borderBottomColor: "#46a302",
     marginLeft: 8,
+  },
+
+  playButtonDone: {
+    backgroundColor: "#1cb0f6",
+    borderBottomColor: "#0f8ac0",
   },
 
   playButtonBlocked: {

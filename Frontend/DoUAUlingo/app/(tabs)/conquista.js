@@ -1,47 +1,89 @@
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
+
+const API_URL = "http://localhost:8080";
 
 export default function ConquistaPage() {
   const { theme } = useTheme();
+  const { usuario } = useAuth();
+
+  const [perfil, setPerfil] = useState(null);
+  const [progresso, setProgresso] = useState([]);
+
+  useEffect(() => {
+    carregarDados();
+
+    const interval = setInterval(() => {
+      carregarDados();
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [usuario]);
+
+  const carregarDados = async () => {
+    if (!usuario?.email) return;
+
+    try {
+      const perfilResponse = await fetch(
+        `${API_URL}/usuarios/me?email=${usuario.email}`
+      );
+      const perfilData = await perfilResponse.json();
+      setPerfil(perfilData);
+
+      const progressoResponse = await fetch(
+        `${API_URL}/progresso?email=${usuario.email}`
+      );
+      const progressoData = await progressoResponse.json();
+      setProgresso(progressoData);
+    } catch (error) {
+      console.log("Erro ao carregar conquistas:", error);
+    }
+  };
+
+  const xp = perfil?.xp || 0;
+  const nivel = perfil?.nivel || 1;
+  const streak = perfil?.streak || 0;
+  const desafiosConcluidos = progresso.length;
 
   const achievements = [
     {
       title: "Primeira lição",
       description: "Você completou sua primeira atividade.",
       emoji: "📚",
-      unlocked: true,
+      unlocked: desafiosConcluidos >= 1,
     },
     {
-      title: "Sequência de fogo",
-      description: "Estudou por 7 dias seguidos.",
+      title: "Sequência inicial",
+      description: "Concluiu 2 dias de progresso no app.",
       emoji: "🔥",
-      unlocked: true,
+      unlocked: streak >= 2,
     },
     {
       title: "Caçador de XP",
-      description: "Acumulou 800 XP no app.",
+      description: "Acumulou pelo menos 150 XP no app.",
       emoji: "⭐",
-      unlocked: true,
+      unlocked: xp >= 150,
     },
     {
       title: "Mestre dos desafios",
-      description: "Complete 10 desafios para desbloquear.",
+      description: "Complete 3 desafios para desbloquear.",
       emoji: "🏆",
-      unlocked: false,
+      unlocked: desafiosConcluidos >= 3,
     },
     {
       title: "Aluno lendário",
-      description: "Chegue ao nível 10.",
+      description: "Chegue ao nível 2.",
       emoji: "🦉",
-      unlocked: false,
+      unlocked: nivel >= 2,
     },
   ];
+
+  const desbloqueadas = achievements.filter((item) => item.unlocked).length;
+  const total = achievements.length;
+  const porcentagem = Math.floor((desbloqueadas / total) * 100);
 
   return (
     <ScrollView
@@ -51,9 +93,7 @@ export default function ConquistaPage() {
       <View style={styles.header}>
         <Text style={styles.logoText}>doUAUlingo</Text>
 
-        <Text style={[styles.title, { color: theme.text }]}>
-          Conquistas
-        </Text>
+        <Text style={[styles.title, { color: theme.text }]}>Conquistas</Text>
 
         <Text style={[styles.subtitle, { color: theme.subtext }]}>
           Veja seus troféus, metas e recompensas.
@@ -65,7 +105,7 @@ export default function ConquistaPage() {
 
         <View style={styles.summaryInfo}>
           <Text style={[styles.summaryTitle, { color: theme.text }]}>
-            3 de 5 desbloqueadas
+            {desbloqueadas} de {total} desbloqueadas
           </Text>
 
           <View
@@ -77,7 +117,10 @@ export default function ConquistaPage() {
             <View
               style={[
                 styles.progressFill,
-                { backgroundColor: theme.primary || "#58cc02" },
+                {
+                  width: `${porcentagem}%`,
+                  backgroundColor: theme.primary || "#58cc02",
+                },
               ]}
             />
           </View>
@@ -113,9 +156,7 @@ export default function ConquistaPage() {
             </Text>
           </View>
 
-          <Text style={styles.status}>
-            {item.unlocked ? "✅" : "🔒"}
-          </Text>
+          <Text style={styles.status}>{item.unlocked ? "✅" : "🔒"}</Text>
         </View>
       ))}
     </ScrollView>
@@ -190,7 +231,6 @@ const styles = StyleSheet.create({
   },
 
   progressFill: {
-    width: "60%",
     height: "100%",
     borderRadius: 20,
   },

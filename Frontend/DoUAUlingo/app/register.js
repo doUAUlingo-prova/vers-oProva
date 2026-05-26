@@ -1,5 +1,7 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+
 import {
   Image,
   KeyboardAvoidingView,
@@ -12,14 +14,17 @@ import {
   View,
 } from "react-native";
 
+const API_URL = "http://localhost:8080";
+
 export default function RegisterPage() {
+  const router = useRouter();
+  const { login } = useAuth();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [error, setError] = useState("");
-  const router = useRouter();
 
   const handleRegister = async () => {
     setError("");
@@ -30,12 +35,12 @@ export default function RegisterPage() {
     }
 
     if (password !== confirmPassword) {
-      setError("As senhas não são iguais.");
+      setError("As senhas não coincidem.");
       return;
     }
 
     try {
-      const response = await fetch("http://192.168.1.20:8080/auth/register", {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -50,14 +55,22 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.message || "Erro ao cadastrar.");
+        setError(data.erro || "Erro ao cadastrar.");
         return;
       }
 
-      router.replace("/login");
+      // LOGIN AUTOMÁTICO
+      const loginResponse = await login(email, password);
+
+      if (loginResponse.success) {
+        router.replace("/(tabs)/dashboard");
+      } else {
+        router.replace("/login");
+      }
+
     } catch (error) {
-      setError("Erro ao conectar com o servidor.");
       console.log(error);
+      setError("Erro ao conectar com o servidor.");
     }
   };
 
@@ -88,7 +101,7 @@ export default function RegisterPage() {
           <Text style={styles.title}>Criar sua conta</Text>
 
           <TextInput
-            placeholder="Seu nome"
+            placeholder="Nome"
             placeholderTextColor="#9ca3af"
             value={name}
             onChangeText={setName}
@@ -96,7 +109,7 @@ export default function RegisterPage() {
           />
 
           <TextInput
-            placeholder="seu@email.com"
+            placeholder="E-mail"
             placeholderTextColor="#9ca3af"
             value={email}
             onChangeText={setEmail}
@@ -106,7 +119,7 @@ export default function RegisterPage() {
           />
 
           <TextInput
-            placeholder="Sua senha"
+            placeholder="Senha"
             placeholderTextColor="#9ca3af"
             secureTextEntry
             value={password}
@@ -123,9 +136,14 @@ export default function RegisterPage() {
             style={styles.input}
           />
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? (
+            <Text style={styles.error}>{error}</Text>
+          ) : null}
 
-          <TouchableOpacity style={styles.primaryButton} onPress={handleRegister}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleRegister}
+          >
             <Text style={styles.primaryText}>CADASTRAR</Text>
           </TouchableOpacity>
 
@@ -133,7 +151,9 @@ export default function RegisterPage() {
             style={styles.secondaryButton}
             onPress={() => router.push("/login")}
           >
-            <Text style={styles.secondaryText}>JÁ TENHO UMA CONTA</Text>
+            <Text style={styles.secondaryText}>
+              JÁ TENHO UMA CONTA
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -180,20 +200,20 @@ const styles = StyleSheet.create({
   },
 
   logoCircle: {
-    width: 125,
-    height: 125,
-    borderRadius: 70,
+    width: 145,
+    height: 145,
+    borderRadius: 80,
     backgroundColor: "#d7ffb8",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 22,
+    marginBottom: 28,
     borderWidth: 4,
     borderColor: "#58cc02",
   },
 
   logoImage: {
-    width: 92,
-    height: 92,
+    width: 100,
+    height: 100,
     resizeMode: "contain",
   },
 
@@ -202,17 +222,17 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#3c3c3c",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 24,
   },
 
   input: {
     width: "100%",
     backgroundColor: "#f7f7f7",
-    paddingVertical: 14,
+    paddingVertical: 15,
     paddingHorizontal: 16,
     borderRadius: 16,
     color: "#333",
-    marginBottom: 12,
+    marginBottom: 14,
     borderWidth: 2,
     borderColor: "#e5e5e5",
     fontSize: 15,
@@ -232,7 +252,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 10,
     borderBottomWidth: 5,
     borderBottomColor: "#46a302",
   },
