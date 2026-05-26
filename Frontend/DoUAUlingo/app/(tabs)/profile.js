@@ -1,10 +1,12 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -21,10 +23,14 @@ export default function Profile() {
   const { usuario, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { selectedAnimal, setSelectedAnimal } = useAvatar();
-
   const router = useRouter();
 
   const [perfil, setPerfil] = useState(null);
+  const [progresso, setProgresso] = useState([]);
+  const [novaSenha, setNovaSenha] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [novoNome, setNovoNome] = useState("");
+  const [editandoNome, setEditandoNome] = useState(false);
 
   const animals = [
     { id: "owl", emoji: "🦉" },
@@ -40,7 +46,7 @@ export default function Profile() {
 
   useEffect(() => {
     carregarPerfil();
-  }, []);
+  }, [usuario?.email]);
 
   const carregarPerfil = async () => {
     if (!usuario?.email) return;
@@ -49,10 +55,14 @@ export default function Profile() {
       const response = await fetch(
         `${API_URL}/usuarios/me?email=${usuario.email}`
       );
-
       const data = await response.json();
-
       setPerfil(data);
+
+      const progressoResponse = await fetch(
+        `${API_URL}/progresso?email=${usuario.email}`
+      );
+      const progressoData = await progressoResponse.json();
+      setProgresso(progressoData);
 
       if (data.avatar) {
         setSelectedAnimal(data.avatar);
@@ -63,61 +73,123 @@ export default function Profile() {
   };
 
   const atualizarAvatar = async (avatar) => {
-  if (!perfil?.email && !usuario?.email) return;
+    if (!perfil?.email && !usuario?.email) return;
 
-  const emailUsuario = perfil?.email || usuario?.email;
+    const emailUsuario = perfil?.email || usuario?.email;
 
-  try {
-    setSelectedAnimal(avatar);
+    try {
+      setSelectedAnimal(avatar);
 
-    const response = await fetch(
-      `${API_URL}/usuarios/avatar?email=${emailUsuario}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              avatar,
-            }),
-          }
-        );
+      const response = await fetch(
+        `${API_URL}/usuarios/avatar?email=${emailUsuario}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ avatar }),
+        }
+      );
 
-        const data = await response.json();
+      const data = await response.json();
 
-        setPerfil((perfilAnterior) => ({
-          ...perfilAnterior,
-          ...data,
-          avatar,
-        }));
-      } catch (error) {
-        console.log("Erro ao atualizar avatar:", error);
+      setPerfil((old) => ({
+        ...old,
+        ...data,
+        avatar,
+      }));
+    } catch (error) {
+      console.log("Erro ao atualizar avatar:", error);
+    }
+  };
+
+  const alterarNome = async () => {
+    if (!perfil?.email) return;
+
+    if (!novoNome || novoNome.trim().length < 2) {
+      Alert.alert("Nome inválido", "Digite um nome válido.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_URL}/usuarios/nome?email=${perfil.email}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nome: novoNome.trim() }),
+        }
+      );
+
+      if (!response.ok) {
+        Alert.alert("Erro", "Não foi possível alterar o nome.");
+        return;
       }
-    };
+
+      const data = await response.json();
+
+      setPerfil((old) => ({
+        ...old,
+        nome: data.nome || novoNome.trim(),
+      }));
+
+      setNovoNome("");
+      setEditandoNome(false);
+    } catch (error) {
+      console.log("Erro ao alterar nome:", error);
+      Alert.alert("Erro", "Não foi possível alterar o nome.");
+    }
+  };
+
+  const alterarSenha = async () => {
+    if (!perfil?.email) return;
+
+    if (!novaSenha || novaSenha.length < 6) {
+      Alert.alert("Senha inválida", "A senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_URL}/usuarios/senha?email=${perfil.email}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ senha: novaSenha }),
+        }
+      );
+
+      if (!response.ok) {
+        Alert.alert("Erro", "Não foi possível alterar a senha.");
+        return;
+      }
+
+      setNovaSenha("");
+      setMostrarSenha(false);
+
+      Alert.alert("Sucesso", "Senha alterada com sucesso!");
+    } catch (error) {
+      console.log("Erro ao alterar senha:", error);
+      Alert.alert("Erro", "Erro ao conectar com o servidor.");
+    }
+  };
 
   const stats = [
-    {
-      label: "Dias seguidos",
-      value: perfil?.streak || 0,
-      emoji: "🔥",
-    },
-    {
-      label: "XP total",
-      value: perfil?.xp || 0,
-      emoji: "⭐",
-    },
-    {
-      label: "Nível",
-      value: perfil?.nivel || 1,
-      emoji: "🏆",
-    },
+    { label: "Dias seguidos", value: perfil?.streak || 0, emoji: "🔥" },
+    { label: "XP total", value: perfil?.xp || 0, emoji: "⭐" },
+    { label: "Nível", value: perfil?.nivel || 1, emoji: "🏆" },
   ];
 
-  const achievements =
-    perfil?.conquistas?.split(",").map((item) => ({
-      title: item.trim(),
-      emoji: "🏅",
-    })) || [];
+  const xp = perfil?.xp || 0;
+  const nivel = perfil?.nivel || 1;
+  const streak = perfil?.streak || 0;
+  const desafiosConcluidos = progresso?.length || 0;
+
+  const achievements = [
+    { title: "Primeira lição", emoji: "📚", unlocked: desafiosConcluidos >= 1 },
+    { title: "Sequência inicial", emoji: "🔥", unlocked: streak >= 2 },
+    { title: "Caçador de XP", emoji: "⭐", unlocked: xp >= 150 },
+    { title: "Mestre dos desafios", emoji: "🏆", unlocked: desafiosConcluidos >= 3 },
+    { title: "Aluno lendário", emoji: "🦉", unlocked: nivel >= 2 },
+  ].filter((item) => item.unlocked);
 
   const handleLogout = () => {
     logout();
@@ -152,18 +224,56 @@ export default function Profile() {
       <View style={[styles.profileCard, { backgroundColor: theme.card }]}>
         <View style={styles.avatarCircle}>{renderSelectedAvatar()}</View>
 
-        <Text style={[styles.userName, { color: theme.text }]}>
-          {perfil?.nome?.split(" ")[0] || "Usuário"}
-        </Text>
+        <View style={styles.nameRow}>
+          {editandoNome ? (
+            <>
+              <TextInput
+                value={novoNome}
+                onChangeText={setNovoNome}
+                placeholder="Nome"
+                placeholderTextColor="#999"
+                style={styles.nameInput}
+              />
+
+              <TouchableOpacity onPress={alterarNome} style={styles.nameSaveButton}>
+                <Text style={styles.nameSaveText}>✓</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setNovoNome("");
+                  setEditandoNome(false);
+                }}
+                style={styles.nameCancelButton}
+              >
+                <Text style={styles.nameCancelText}>×</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.userName, { color: theme.text }]}>
+                {perfil?.nome?.split(" ")[0] || "Usuário"}
+              </Text>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setNovoNome(perfil?.nome || "");
+                  setEditandoNome(true);
+                }}
+                style={styles.editNameButton}
+              >
+                <Text style={styles.editNameText}>✏️</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
 
         <Text style={[styles.userEmail, { color: theme.subtext }]}>
           {perfil?.email || "usuario@email.com"}
         </Text>
 
         <View style={styles.levelBadge}>
-          <Text style={styles.levelText}>
-            Nível {perfil?.nivel || 1}
-          </Text>
+          <Text style={styles.levelText}>Nível {perfil?.nivel || 1}</Text>
         </View>
       </View>
 
@@ -245,19 +355,35 @@ export default function Profile() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.optionButton}>
-          <Text style={styles.optionIcon}>🔔</Text>
+        <TouchableOpacity
+          style={styles.optionButton}
+          onPress={() => setMostrarSenha(!mostrarSenha)}
+        >
+          <Text style={styles.optionIcon}>🔐</Text>
           <Text style={[styles.optionText, { color: theme.text }]}>
-            Notificações
+            Redefinir senha
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.optionButton}>
-          <Text style={styles.optionIcon}>🔐</Text>
-          <Text style={[styles.optionText, { color: theme.text }]}>
-            Segurança da conta
-          </Text>
-        </TouchableOpacity>
+        {mostrarSenha && (
+          <View style={styles.passwordContainer}>
+            <TextInput
+              placeholder="Nova senha"
+              placeholderTextColor="#999"
+              secureTextEntry
+              value={novaSenha}
+              onChangeText={setNovaSenha}
+              style={styles.passwordInput}
+            />
+
+            <TouchableOpacity
+              style={styles.savePasswordButton}
+              onPress={alterarSenha}
+            >
+              <Text style={styles.savePasswordText}>Salvar nova senha</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -325,6 +451,70 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     resizeMode: "cover",
+  },
+
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+
+  editNameButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#58cc02",
+  },
+
+  editNameText: {
+    fontSize: 13,
+  },
+
+  nameInput: {
+    width: 150,
+    backgroundColor: "#f7f7f7",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    textAlign: "center",
+    fontWeight: "900",
+    fontSize: 18,
+    borderWidth: 2,
+    borderColor: "#58cc02",
+  },
+
+  nameSaveButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#58cc02",
+  },
+
+  nameSaveText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+
+  nameCancelButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ff4b4b",
+  },
+
+  nameCancelText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "900",
   },
 
   userName: {
@@ -476,6 +666,35 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 15,
     fontWeight: "800",
+  },
+
+  passwordContainer: {
+    marginTop: 12,
+  },
+
+  passwordInput: {
+    backgroundColor: "#f7f7f7",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontWeight: "700",
+    borderWidth: 2,
+    borderColor: "#e5e5e5",
+  },
+
+  savePasswordButton: {
+    marginTop: 10,
+    backgroundColor: "#58cc02",
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: "center",
+    borderBottomWidth: 4,
+    borderBottomColor: "#46a302",
+  },
+
+  savePasswordText: {
+    color: "#fff",
+    fontWeight: "900",
   },
 
   logoutButton: {

@@ -14,41 +14,36 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        salvarSeNaoExistir(1L, "Criando um Bucket S3", 50, "AWS", "Fácil", "/awschalenge/facil?id=1");
+        salvarSeNaoExistir(2L, "EC2 com servidor web", 120, "AWS", "Médio", "/awschalenge/medio?id=2");
+        salvarSeNaoExistir(3L, "EC2 acessando S3", 250, "AWS", "Difícil", "/awschalenge/dificil?id=3");
 
-        if (desafioRepository.count() == 0) {
+        salvarSeNaoExistir(4L, "Primeira tela no Expo", 40, "Expo", "Fácil", "/expochalenge/facil?id=4");
+        salvarSeNaoExistir(5L, "Navegação com Expo Router", 100, "Expo", "Médio", "/expochalenge/medio?id=5");
+        salvarSeNaoExistir(6L, "Consumindo API no Expo", 200, "Expo", "Difícil", "/expochalenge/dificil?id=6");
+    }
 
-            desafioRepository.save(
-                    Desafio.builder()
-                            .id(1L)
-                            .titulo("Criando um Bucket S3")
-                            .xp(50)
-                            .trilha("AWS")
-                            .nivel("Fácil")
-                            .rota("/awschalenge/facil?id=1")
-                            .build()
-            );
-
-            desafioRepository.save(
-                    Desafio.builder()
-                            .id(2L)
-                            .titulo("EC2 com servidor web")
-                            .xp(120)
-                            .trilha("AWS")
-                            .nivel("Médio")
-                            .rota("/awschalenge/medio?id=2")
-                            .build()
-            );
-
-            desafioRepository.save(
-                    Desafio.builder()
-                            .id(3L)
-                            .titulo("EC2 acessando S3")
-                            .xp(250)
-                            .trilha("AWS")
-                            .nivel("Difícil")
-                            .rota("/awschalenge/dificil?id=3")
-                            .build()
-            );
+    private void salvarSeNaoExistir(
+            Long id,
+            String titulo,
+            Integer xp,
+            String trilha,
+            String nivel,
+            String rota
+    ) {
+        if (desafioRepository.existsById(id)) {
+            return;
         }
+
+        Desafio desafio = Desafio.builder()
+                .id(id)
+                .titulo(titulo)
+                .xp(xp)
+                .trilha(trilha)
+                .nivel(nivel)
+                .rota(rota)
+                .build();
+
+        desafioRepository.save(desafio);
     }
 }

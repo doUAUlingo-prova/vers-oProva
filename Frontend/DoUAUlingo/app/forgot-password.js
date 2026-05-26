@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -12,23 +13,85 @@ import {
   View,
 } from "react-native";
 
-export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+const API_URL = "http://localhost:8080";
 
+export default function ForgotPasswordPage() {
   const router = useRouter();
 
-  const handleRecoverPassword = () => {
-    setError("");
-    setMessage("");
+  const [email, setEmail] = useState("");
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    if (!email) {
-      setError("Digite seu e-mail para recuperar a senha.");
+  const redefinirSenha = async () => {
+    setError("");
+    setSuccess("");
+
+    if (!email || !novaSenha || !confirmarSenha) {
+      setError("Preencha todos os campos.");
       return;
     }
 
-    setMessage("Enviamos as instruções para o seu e-mail.");
+    if (!email.includes("@")) {
+      setError("Digite um e-mail válido.");
+      return;
+    }
+
+    if (novaSenha.length < 6) {
+      setError("A senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    if (novaSenha !== confirmarSenha) {
+      setError("As senhas não coincidem.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await fetch(`${API_URL}/usuarios/recuperar-senha`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          novaSenha,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.erro || data.message || "Erro ao redefinir senha.");
+        return;
+      }
+
+      setSuccess("Senha redefinida com sucesso!");
+
+      Alert.alert(
+        "Sucesso",
+        "Sua senha foi redefinida. Agora faça login com a nova senha.",
+        [
+          {
+            text: "Ir para login",
+            onPress: () => router.replace("/login"),
+          },
+        ]
+      );
+
+      setEmail("");
+      setNovaSenha("");
+      setConfirmarSenha("");
+    } catch (error) {
+      console.log("Erro ao recuperar senha:", error);
+      setError("Erro ao conectar com o servidor.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,7 +121,7 @@ export default function ForgotPasswordPage() {
           <Text style={styles.title}>Recuperar senha</Text>
 
           <Text style={styles.subtitle}>
-            Digite seu e-mail e enviaremos as instruções para redefinir sua senha.
+            Digite seu e-mail cadastrado e escolha uma nova senha.
           </Text>
 
           <TextInput
@@ -71,21 +134,48 @@ export default function ForgotPasswordPage() {
             autoCapitalize="none"
           />
 
+          <TextInput
+            placeholder="Nova senha"
+            placeholderTextColor="#9ca3af"
+            value={novaSenha}
+            onChangeText={setNovaSenha}
+            style={styles.input}
+            secureTextEntry
+          />
+
+          <TextInput
+            placeholder="Confirmar nova senha"
+            placeholderTextColor="#9ca3af"
+            value={confirmarSenha}
+            onChangeText={setConfirmarSenha}
+            style={styles.input}
+            secureTextEntry
+          />
+
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          {message ? <Text style={styles.success}>{message}</Text> : null}
+
+          {success ? <Text style={styles.success}>{success}</Text> : null}
 
           <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={handleRecoverPassword}
+            style={[
+              styles.primaryButton,
+              loading && styles.disabledButton,
+            ]}
+            onPress={redefinirSenha}
+            disabled={loading}
           >
-            <Text style={styles.primaryText}>ENVIAR INSTRUÇÕES</Text>
+            <Text style={styles.primaryText}>
+              {loading ? "SALVANDO..." : "REDEFINIR SENHA"}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => router.push("/login")}
           >
-            <Text style={styles.secondaryText}>LEMBREI MINHA SENHA</Text>
+            <Text style={styles.secondaryText}>
+              LEMBREI MINHA SENHA
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -132,20 +222,20 @@ const styles = StyleSheet.create({
   },
 
   logoCircle: {
-    width: 135,
-    height: 135,
-    borderRadius: 75,
+    width: 115,
+    height: 115,
+    borderRadius: 60,
     backgroundColor: "#d7ffb8",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 26,
+    marginBottom: 24,
     borderWidth: 4,
     borderColor: "#58cc02",
   },
 
   logoImage: {
-    width: 100,
-    height: 100,
+    width: 82,
+    height: 82,
     resizeMode: "contain",
   },
 
@@ -154,15 +244,15 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#3c3c3c",
     textAlign: "center",
+    marginBottom: 8,
   },
 
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#777",
+    fontWeight: "700",
     textAlign: "center",
-    marginTop: 10,
-    marginBottom: 28,
-    lineHeight: 23,
+    marginBottom: 22,
   },
 
   input: {
@@ -199,9 +289,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 10,
     borderBottomWidth: 5,
     borderBottomColor: "#46a302",
+  },
+
+  disabledButton: {
+    opacity: 0.65,
   },
 
   primaryText: {

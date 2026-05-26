@@ -26,7 +26,6 @@ export default function Dashboard() {
   const [selectedTab, setSelectedTab] = useState("AWS");
   const [perfil, setPerfil] = useState(null);
   const [progresso, setProgresso] = useState([]);
-  const [progress, setProgress] = useState(0);
 
   const avatarMap = {
     owl: "🦉",
@@ -38,6 +37,7 @@ export default function Dashboard() {
     monkey: "🐵",
     koala: "🐨",
     capybara: capivara,
+
     "🦉": "🦉",
     "🐱": "🐱",
     "🐶": "🐶",
@@ -60,7 +60,6 @@ export default function Dashboard() {
             title: "Criando um Bucket S3",
             xp: 50,
             emoji: "☁️",
-            blocked: false,
             topics: [
               "Entenda o que é o Amazon S3 e para que ele serve.",
               "Aprenda como criar um bucket e enviar arquivos.",
@@ -79,7 +78,6 @@ export default function Dashboard() {
             title: "EC2 com servidor web",
             xp: 120,
             emoji: "🖥️",
-            blocked: false,
             topics: [
               "Entenda o que é uma instância EC2.",
               "Aprenda como instalar Apache ou Nginx.",
@@ -98,7 +96,6 @@ export default function Dashboard() {
             title: "EC2 acessando S3",
             xp: 250,
             emoji: "🔐",
-            blocked: false,
             topics: [
               "Entenda permissões IAM e roles.",
               "Aprenda como listar arquivos do S3 pela EC2.",
@@ -120,7 +117,6 @@ export default function Dashboard() {
             title: "Primeira tela no Expo",
             xp: 40,
             emoji: "📱",
-            blocked: false,
             topics: [
               "Entenda View, Text e StyleSheet.",
               "Aprenda como montar uma tela simples.",
@@ -139,7 +135,6 @@ export default function Dashboard() {
             title: "Navegação com Expo Router",
             xp: 100,
             emoji: "🧭",
-            blocked: false,
             topics: [
               "Entenda como o expo-router funciona.",
               "Aprenda como navegar entre páginas.",
@@ -158,7 +153,6 @@ export default function Dashboard() {
             title: "Consumindo API no Expo",
             xp: 200,
             emoji: "⚡",
-            blocked: false,
             topics: [
               "Entenda fetch, axios e useEffect.",
               "Aprenda como exibir dados vindos de uma API.",
@@ -178,8 +172,7 @@ export default function Dashboard() {
     }, 2000);
 
     return () => clearInterval(interval);
-
-  }, [usuario]);
+  }, [usuario?.email]);
 
   const carregarDados = async () => {
     if (!usuario?.email) return;
@@ -198,19 +191,78 @@ export default function Dashboard() {
 
       const progressoData = await progressoResponse.json();
       setProgresso(progressoData);
-
-      const totalDesafios = 6;
-      const concluidos = progressoData.length;
-      const porcentagem = Math.floor((concluidos / totalDesafios) * 100);
-
-      setProgress(porcentagem);
     } catch (error) {
       console.log("Erro ao carregar dados:", error);
     }
   };
 
+  const getDesafiosDaTrilha = () => {
+    return challengeSections[selectedTab].flatMap(
+      (section) => section.challenges
+    );
+  };
+
   const desafioConcluido = (id) => {
     return progresso.some((item) => item.desafio?.id === id);
+  };
+
+  const desafioBloqueado = (challengeId) => {
+    const desafiosDaTrilha = getDesafiosDaTrilha();
+    const index = desafiosDaTrilha.findIndex((item) => item.id === challengeId);
+
+    if (index === 0) return false;
+
+    const desafioAnterior = desafiosDaTrilha[index - 1];
+
+    return !desafioConcluido(desafioAnterior.id);
+  };
+
+  const getProgressoTrilha = () => {
+    const desafiosDaTrilha = getDesafiosDaTrilha();
+
+    if (desafiosDaTrilha.length === 0) return 0;
+
+    const concluidos = desafiosDaTrilha.filter((desafio) =>
+      desafioConcluido(desafio.id)
+    ).length;
+
+    return Math.floor((concluidos / desafiosDaTrilha.length) * 100);
+  };
+
+  const getAulaAtual = () => {
+    const desafiosDaTrilha = getDesafiosDaTrilha();
+
+    const proximaAula = desafiosDaTrilha.find(
+      (desafio) => !desafioConcluido(desafio.id)
+    );
+
+    if (!proximaAula) {
+      return `${selectedTab}: trilha concluída!`;
+    }
+
+    return `${selectedTab}: ${proximaAula.title}`;
+  };
+
+  const getPrimeiraAulaDisponivel = () => {
+    const desafiosDaTrilha = getDesafiosDaTrilha();
+
+    const proximaAula = desafiosDaTrilha.find(
+      (desafio) => !desafioConcluido(desafio.id) && !desafioBloqueado(desafio.id)
+    );
+
+    return proximaAula || desafiosDaTrilha[0];
+  };
+
+  const getRouteByChallengeId = (challengeId) => {
+    for (const section of challengeSections[selectedTab]) {
+      const found = section.challenges.find((item) => item.id === challengeId);
+
+      if (found) {
+        return section.route;
+      }
+    }
+
+    return challengeSections[selectedTab][0].route;
   };
 
   const renderAvatar = () => {
@@ -223,27 +275,13 @@ export default function Dashboard() {
     return <Image source={avatar} style={styles.avatarImage} />;
   };
 
-  const startLevel = async (route, challengeId) => {
-    if (!usuario?.email || !challengeId) {
-      router.push(route);
-      return;
-    }
-
-    try {
-      await fetch(
-        `${API_URL}/progresso/concluir?email=${usuario.email}&desafioId=${challengeId}`,
-        {
-          method: "POST",
-        }
-      );
-
-      await carregarDados();
-    } catch (error) {
-      console.log("Erro ao salvar progresso:", error);
-    }
+  const startLevel = (route, challengeId) => {
+    if (desafioBloqueado(challengeId)) return;
 
     router.push(route);
   };
+
+  const progressoTrilha = getProgressoTrilha();
 
   return (
     <ScrollView
@@ -268,11 +306,15 @@ export default function Dashboard() {
 
       <View style={[styles.mainCard, { backgroundColor: theme.card }]}>
         <Text style={[styles.cardTitle, { color: theme.subtext }]}>
-          Seu progresso
+          Seu progresso em {selectedTab}
         </Text>
 
         <Text style={[styles.lessonTitle, { color: theme.text }]}>
-          Unidade 1: Primeiros passos
+          Aula atual:
+        </Text>
+
+        <Text style={[styles.currentLesson, { color: theme.subtext }]}>
+          {getAulaAtual()}
         </Text>
 
         <View
@@ -285,7 +327,7 @@ export default function Dashboard() {
             style={[
               styles.progressFill,
               {
-                width: `${progress}%`,
+                width: `${progressoTrilha}%`,
                 backgroundColor: theme.primary || "#58cc02",
               },
             ]}
@@ -293,7 +335,7 @@ export default function Dashboard() {
         </View>
 
         <Text style={[styles.progressText, { color: theme.subtext }]}>
-          {progress}% concluído
+          {progressoTrilha}% concluído
         </Text>
       </View>
 
@@ -367,80 +409,94 @@ export default function Dashboard() {
             <Text style={styles.levelText}>{levelData.level}</Text>
           </View>
 
-          {levelData.challenges.map((challenge) => (
-            <View
-              key={challenge.id}
-              style={[
-                styles.challengeCard,
-                { backgroundColor: theme.card },
-                challenge.blocked && styles.challengeBlocked,
-                desafioConcluido(challenge.id) && styles.challengeDone,
-              ]}
-            >
-              <View style={styles.challengeIcon}>
-                <Text style={styles.challengeEmoji}>{challenge.emoji}</Text>
-              </View>
+          {levelData.challenges.map((challenge) => {
+            const concluido = desafioConcluido(challenge.id);
+            const bloqueado = desafioBloqueado(challenge.id);
 
-              <View style={styles.challengeInfo}>
-                <Text style={[styles.challengeTitle, { color: theme.text }]}>
-                  {challenge.title}
-                </Text>
-
-                <Text style={styles.challengeXP}>
-                  {desafioConcluido(challenge.id)
-                    ? "Concluído"
-                    : `+${challenge.xp} XP`}
-                </Text>
-
-                <View style={styles.topicsBox}>
-                  {challenge.topics.map((topic, index) => (
-                    <Text
-                      key={index}
-                      style={[
-                        styles.topicText,
-                        { color: theme.subtext },
-                        index === 2 && styles.finalChallengeText,
-                      ]}
-                    >
-                      {index === 2 ? "🎯 " : "• "}
-                      {topic}
-                    </Text>
-                  ))}
-                </View>
-              </View>
-
-              <TouchableOpacity
-                disabled={challenge.blocked}
+            return (
+              <View
+                key={challenge.id}
                 style={[
-                  styles.playButton,
-                  challenge.blocked && styles.playButtonBlocked,
-                  desafioConcluido(challenge.id) && styles.playButtonDone,
+                  styles.challengeCard,
+                  { backgroundColor: theme.card },
+                  bloqueado && styles.challengeBlocked,
+                  concluido && styles.challengeDone,
                 ]}
-                onPress={() => startLevel(levelData.route, challenge.id)}
               >
-                <Text style={styles.playButtonText}>
-                  {desafioConcluido(challenge.id)
-                    ? "✓"
-                    : challenge.blocked
-                    ? "🔒"
-                    : "▶"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+                <View style={styles.challengeIcon}>
+                  <Text style={styles.challengeEmoji}>
+                    {bloqueado ? "🔒" : challenge.emoji}
+                  </Text>
+                </View>
+
+                <View style={styles.challengeInfo}>
+                  <Text style={[styles.challengeTitle, { color: theme.text }]}>
+                    {challenge.title}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.challengeXP,
+                      concluido && styles.challengeCompletedText,
+                      bloqueado && styles.challengeLockedText,
+                    ]}
+                  >
+                    {concluido
+                      ? "Concluído"
+                      : bloqueado
+                      ? "Bloqueado"
+                      : `+${challenge.xp} XP`}
+                  </Text>
+
+                  <View style={styles.topicsBox}>
+                    {challenge.topics.map((topic, index) => (
+                      <Text
+                        key={index}
+                        style={[
+                          styles.topicText,
+                          { color: theme.subtext },
+                          index === 2 && styles.finalChallengeText,
+                          bloqueado && styles.lockedTopicText,
+                        ]}
+                      >
+                        {index === 2 ? "🎯 " : "• "}
+                        {topic}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  disabled={bloqueado}
+                  style={[
+                    styles.playButton,
+                    bloqueado && styles.playButtonBlocked,
+                    concluido && styles.playButtonDone,
+                  ]}
+                  onPress={() => startLevel(levelData.route, challenge.id)}
+                >
+                  <Text style={styles.playButtonText}>
+                    {concluido ? "✓" : bloqueado ? "🔒" : "▶"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
         </View>
       ))}
 
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() =>
-          startLevel(
-            challengeSections[selectedTab][0].route,
-            challengeSections[selectedTab][0].challenges[0].id
-          )
-        }
+        onPress={() => {
+          const aula = getPrimeiraAulaDisponivel();
+          const rota = getRouteByChallengeId(aula.id);
+
+          startLevel(rota, aula.id);
+        }}
       >
-        <Text style={styles.primaryText}>INICIAR LIÇÃO</Text>
+        <Text style={styles.primaryText}>
+          {progressoTrilha === 100 ? "TRILHA CONCLUÍDA" : "INICIAR LIÇÃO"}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -522,7 +578,13 @@ const styles = StyleSheet.create({
   lessonTitle: {
     fontSize: 22,
     fontWeight: "900",
-    marginBottom: 16,
+    marginBottom: 4,
+  },
+
+  currentLesson: {
+    fontSize: 14,
+    fontWeight: "800",
+    marginBottom: 14,
   },
 
   progressBar: {
@@ -681,6 +743,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
+  challengeCompletedText: {
+    color: "#58cc02",
+  },
+
+  challengeLockedText: {
+    color: "#999",
+  },
+
   topicsBox: {
     marginTop: 10,
     gap: 6,
@@ -695,6 +765,10 @@ const styles = StyleSheet.create({
   finalChallengeText: {
     color: "#58cc02",
     fontWeight: "900",
+  },
+
+  lockedTopicText: {
+    opacity: 0.7,
   },
 
   playButton: {

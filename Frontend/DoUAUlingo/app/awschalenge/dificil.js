@@ -8,13 +8,16 @@ import {
 } from "react-native";
 
 import { useTheme } from "../../contexts/ThemeContext";
+import { useAuth } from "../../contexts/AuthContext";
+
+const API_URL = "http://localhost:8080";
 
 const challenges = [
   {
     id: "3",
     category: "AWS",
     level: "Difícil",
-    title: "EC2 acessando S3 com IAM Roles",
+    title: "EC2 acessando S3",
     emoji: "🔐",
     xp: 250,
 
@@ -24,85 +27,71 @@ const challenges = [
         text:
           "Neste módulo avançado você irá compreender como funciona a comunicação segura entre serviços da AWS utilizando IAM Roles e políticas de permissão.\n\nO foco principal será permitir que uma instância EC2 consiga acessar buckets S3 de forma segura, sem utilizar credenciais fixas dentro da aplicação.",
       },
-
       {
         title: "Cenário do Projeto",
         text:
           "Imagine uma aplicação hospedada em uma instância EC2 que precisa ler arquivos armazenados no S3, fazer upload de backups, processar imagens, ler arquivos JSON e hospedar arquivos estáticos.\n\nPor segurança, não é recomendado armazenar AWS Access Key e AWS Secret Key diretamente no servidor.\n\nPara resolver isso utilizamos IAM Roles, Temporary Credentials e Security Policies.",
       },
-
       {
         title: "O que é IAM?",
         text:
           "O IAM é o serviço da AWS responsável por controle de acesso, autenticação, autorização, gerenciamento de usuários e permissões.",
       },
-
       {
         title: "O que é uma IAM Role?",
         text:
           "Uma IAM Role é uma identidade temporária utilizada por serviços AWS para acessar outros recursos de forma segura.",
       },
-
       {
         title: "EC2 utilizando IAM Role",
         text:
           "Quando associamos uma IAM Role à EC2, a AWS fornece permissões temporárias automaticamente para a instância.",
       },
-
       {
         title: "Segurança em ambientes cloud",
         text:
           "A abordagem correta é utilizar IAM Roles, aplicar o princípio do menor privilégio e evitar credenciais fixas no código.",
       },
-
       {
         title: "Estrutura da arquitetura",
         text:
           "Usuário\n ↓\nEC2\n ↓\nIAM Role\n ↓\nAWS STS\n ↓\nTemporary Credentials\n ↓\nAmazon S3",
       },
-
       {
         title: "Etapa 1 — Criando Bucket S3",
         text:
           "1. Abrir Amazon S3\n2. Criar bucket\n3. Definir nome único, região, bloqueio público e versionamento opcional.",
       },
-
       {
         title: "Etapa 2 — Criando a EC2",
         text:
           "Configure uma instância usando Amazon Linux, t2.micro, Security Group, chave SSH e IAM Role.",
       },
-
       {
         title: "Etapa 3 — Criando IAM Role",
         text:
           "1. Abrir IAM\n2. Roles\n3. Create Role\n4. AWS Service\n5. EC2",
       },
-
       {
         title: "Etapa 4 — Criando Política de Permissão",
         text:
           "Permissões principais:\n\n• s3:ListBucket\n• s3:GetObject",
       },
-
       {
         title: "Associando Role à EC2",
         text:
           "Abrir EC2 → Actions → Security → Modify IAM Role → Selecionar Role.",
       },
-
       {
         title: "Testando acesso ao S3",
         text:
           "aws s3 ls\n\naws s3 ls s3://empresa-backups-s3",
       },
-
       {
         title: "Possíveis erros comuns",
         text:
           "Access Denied, NoCredentialsError, Bucket inexistente e Região incorreta.",
       },
-
       {
         title: "Boas práticas profissionais",
         text:
@@ -119,8 +108,29 @@ export default function ChallengeScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { theme } = useTheme();
+  const { usuario } = useAuth();
 
   const challenge = challenges.find((item) => item.id === String(id));
+
+  const concluirDesafio = async () => {
+    if (!challenge || !usuario?.email) {
+      router.replace("/(tabs)/dashboard");
+      return;
+    }
+
+    try {
+      await fetch(
+        `${API_URL}/progresso/concluir?email=${usuario.email}&desafioId=${challenge.id}`,
+        {
+          method: "POST",
+        }
+      );
+    } catch (error) {
+      console.log("Erro ao salvar progresso:", error);
+    }
+
+    router.replace("/(tabs)/dashboard");
+  };
 
   if (!challenge) {
     return (
@@ -193,7 +203,7 @@ export default function ChallengeScreen() {
 
       <TouchableOpacity
         style={styles.button}
-        onPress={() => router.replace("/(tabs)/dashboard")}
+        onPress={concluirDesafio}
       >
         <Text style={styles.buttonText}>
           MARCAR COMO CONCLUÍDO
@@ -237,7 +247,7 @@ const styles = StyleSheet.create({
     borderColor: "#e5e5e5",
     borderBottomWidth: 6,
     borderBottomColor: "#d1d1d1",
-    marginBottom: 24,
+    marginBottom: 18,
   },
 
   emoji: {
@@ -295,7 +305,7 @@ const styles = StyleSheet.create({
 
   topicText: {
     fontSize: 14,
-    lineHeight: 21,
+    lineHeight: 22,
     fontWeight: "700",
   },
 
@@ -335,27 +345,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomWidth: 5,
     borderBottomColor: "#46a302",
+    marginTop: 10,
   },
 
   buttonText: {
     color: "#fff",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "900",
   },
 
   backBottomButton: {
     marginTop: 16,
-    backgroundColor: "#ff0000",
-    paddingVertical: 16,
-    borderRadius: 18,
     alignItems: "center",
-    borderBottomWidth: 5,
-    borderBottomColor: "#111",
+    paddingVertical: 14,
   },
 
   backBottomText: {
-    color: "#fff",
-    fontSize: 14,
+    color: "#1cb0f6",
+    fontSize: 15,
     fontWeight: "900",
   },
 
