@@ -33,7 +33,7 @@ export default function LoginPage() {
     const result = await login(email, password);
 
     if (result.success) {
-      router.replace("/");
+      router.replace("(tabs)/dashboard");
     } else {
       setError(result.message || "E-mail ou senha inválidos.");
     }
