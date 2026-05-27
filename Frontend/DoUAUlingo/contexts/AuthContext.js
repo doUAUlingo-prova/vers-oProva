@@ -1,119 +1,132 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const AuthContext = createContext();
 
 const API_URL = "https://x49aok4laf.execute-api.us-east-1.amazonaws.com";
-export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [token, setToken] = useState(null);
+
+export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const login = async (email, password) => {
+  useEffect(() => {
+    carregarUsuarioSalvo();
+  }, []);
+
+  const carregarUsuarioSalvo = async () => {
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          senha: password,
-        }),
-      });
+      const usuarioSalvo = await AsyncStorage.getItem("usuario");
 
-      const data = await response.json();
+      if (usuarioSalvo) {
+        const user = JSON.parse(usuarioSalvo);
 
-      if (!response.ok) {
-        return {
-          success: false,
-          message: data.message || "E-mail ou senha inválidos.",
-        };
+        const response = await fetch(
+          `${API_URL}/usuarios/me?email=${encodeURIComponent(user.email)}`
+        );
+
+        if (response.ok) {
+          const usuarioAtualizado = await response.json();
+          setUsuario(usuarioAtualizado);
+          await AsyncStorage.setItem("usuario", JSON.stringify(usuarioAtualizado));
+        } else {
+          setUsuario(user);
+        }
       }
-
-      setToken(data.token);
-      setUsuario(data.usuario || data.user || {
-        email: email,
-        nome: data.nome || "Usuário",
-      });
-      setIsAuthenticated(true);
-
-      return {
-        success: true,
-        token: data.token,
-      };
     } catch (error) {
-      return {
-        success: false,
-        message: "Erro ao conectar com o servidor.",
-      };
+      console.log("Erro ao carregar usuário salvo:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const register = async (nome, email, password) => {
+  const atualizarUsuario = async () => {
     try {
-      const response = await fetch(`${API_URL}/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          nome,
-          email,
-          senha: password,
-        }),
-      });
+      if (!usuario?.email) return;
 
-      const data = await response.json();
+      const response = await fetch(
+        `${API_URL}/usuarios/me?email=${encodeURIComponent(usuario.email)}`
+      );
 
-      if (!response.ok) {
-        return {
-          success: false,
-          message: data.message || "Erro ao cadastrar usuário.",
-        };
+      if (response.ok) {
+        const usuarioAtualizado = await response.json();
+        setUsuario(usuarioAtualizado);
+        await AsyncStorage.setItem("usuario", JSON.stringify(usuarioAtualizado));
       }
-
-      return {
-        success: true,
-        data,
-      };
     } catch (error) {
-      return {
-        success: false,
-        message: "Erro ao conectar com o servidor.",
-      };
+      console.log("Erro ao atualizar usuário:", error);
     }
   };
 
-  const logout = () => {
-    setToken(null);
+  const login = async (email, senha) => {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, senha }),
+    });
+
+    if (!response.ok) {
+      throw new Error("E-mail ou senha inválidos.");
+    }
+
+    const data = await response.json();
+
+    const user = data.usuario || data;
+
+    setUsuario(user);
+    await AsyncStorage.setItem("usuario", JSON.stringify(user));
+
+    return user;
+  };
+
+  const register = async (nome, email, senha) => {
+    const response = await fetch(`${API_URL}/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ nome, email, senha }),
+    });
+
+    if (!response.ok) {
+      const erro = await response.text();
+      console.log("Erro cadastro:", erro);
+      throw new Error("Erro ao cadastrar usuário.");
+    }
+
+    const data = await response.json();
+
+    const user = data.usuario || data;
+
+    setUsuario(user);
+    await AsyncStorage.setItem("usuario", JSON.stringify(user));
+
+    return user;
+  };
+
+  const logout = async () => {
     setUsuario(null);
-    setIsAuthenticated(false);
+    await AsyncStorage.removeItem("usuario");
   };
 
   return (
     <AuthContext.Provider
       value={{
+        usuario,
+        setUsuario,
+        loading,
         login,
         register,
         logout,
-        isAuthenticated,
-        token,
-        usuario,
-        loading,
+        atualizarUsuario,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth precisa estar dentro do AuthProvider");
-  }
-
-  return context;
-};
+export function useAuth() {
+  return useContext(AuthContext);
+}

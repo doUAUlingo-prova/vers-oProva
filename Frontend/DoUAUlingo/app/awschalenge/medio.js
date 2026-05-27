@@ -1,3 +1,4 @@
+import { useAuth } from "../../contexts/AuthContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -182,11 +183,12 @@ export default function ChallengeScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { theme } = useTheme();
-
+  const { usuario, atualizarUsuario } = useAuth();
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [lockedQuestions, setLockedQuestions] = useState({});
   const [lives, setLives] = useState(3);
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const challenge = challenges.find((item) => item.id === String(id));
 
@@ -256,9 +258,54 @@ export default function ChallengeScreen() {
     }));
   };
 
-  const submitChallenge = () => {
-    if (!allAnswered || submitted) return;
+  const submitChallenge = async () => {
+    if (!allAnswered || submitted || saving) return;
+
     setSubmitted(true);
+
+    if (!approved) return;
+
+    try {
+      setSaving(true);
+
+      if (!usuario?.email) {
+        console.log("Usuário não encontrado para salvar progresso.");
+        return;
+      }
+
+      const response = await fetch(
+        `${API_URL}/progresso/concluir?email=${encodeURIComponent(
+          usuario.email
+        )}&desafioId=${challenge.id}`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) {
+        const erro = await response.text();
+        console.log("Erro ao salvar progresso:", erro);
+        return;
+      }
+
+      if (atualizarUsuario) {
+        await atualizarUsuario();
+      }
+
+      console.log("Progresso salvo com sucesso!");
+    } catch (error) {
+      console.log("Erro ao concluir desafio:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const voltarDashboard = async () => {
+    if (atualizarUsuario) {
+      await atualizarUsuario();
+    }
+
+    router.replace("/(tabs)");
   };
 
   return (
@@ -432,7 +479,7 @@ export default function ChallengeScreen() {
 {submitted && (
   <TouchableOpacity
     style={styles.backBottomButton}
-    onPress={() => router.replace("/(tabs)/dashboard")}
+    onPress={voltarDashboard}
   >
     <Text style={styles.backBottomText}>
       ← Voltar ao Dashboard

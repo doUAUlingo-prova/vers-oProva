@@ -1,3 +1,4 @@
+import { useAuth } from "../../contexts/AuthContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -9,7 +10,6 @@ import {
 } from "react-native";
 
 import { useTheme } from "../../contexts/ThemeContext";
-import { useAuth } from "../../contexts/AuthContext";
 
 const API_URL = "https://x49aok4laf.execute-api.us-east-1.amazonaws.com";
 
@@ -106,12 +106,13 @@ export default function ChallengeScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { theme } = useTheme();
-  const { usuario } = useAuth();
+  const { usuario, atualizarUsuario } = useAuth();
 
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [lockedQuestions, setLockedQuestions] = useState({});
   const [lives, setLives] = useState(3);
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const challenge = challenges.find((item) => item.id === String(id));
 
@@ -130,7 +131,7 @@ export default function ChallengeScreen() {
           Desafio não encontrado 😵
         </Text>
 
-        <TouchableOpacity onPress={() => router.replace("/(tabs)/dashboard")}>
+        <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
           <Text style={styles.backText}>← Voltar ao início</Text>
         </TouchableOpacity>
       </View>
@@ -172,22 +173,53 @@ export default function ChallengeScreen() {
   };
 
   const submitChallenge = async () => {
-    if (!allAnswered || submitted) return;
+    if (!allAnswered || submitted || saving) return;
 
     setSubmitted(true);
 
     if (!approved) return;
 
     try {
-      await fetch(
-        `${API_URL}/progresso/concluir?email=${usuario.email}&desafioId=${challenge.id}`,
+      setSaving(true);
+
+      if (!usuario?.email) {
+        console.log("Usuário não encontrado para salvar progresso.");
+        return;
+      }
+
+      const response = await fetch(
+        `${API_URL}/progresso/concluir?email=${encodeURIComponent(
+          usuario.email
+        )}&desafioId=${challenge.id}`,
         {
           method: "POST",
         }
       );
+
+      if (!response.ok) {
+        const erro = await response.text();
+        console.log("Erro ao salvar progresso:", erro);
+        return;
+      }
+
+      if (atualizarUsuario) {
+        await atualizarUsuario();
+      }
+
+      console.log("Progresso salvo com sucesso!");
     } catch (error) {
-      console.log("Erro ao salvar progresso:", error);
+      console.log("Erro ao concluir desafio:", error);
+    } finally {
+      setSaving(false);
     }
+  };
+
+  const voltarDashboard = async () => {
+    if (atualizarUsuario) {
+      await atualizarUsuario();
+    }
+
+    router.replace("/(tabs)");
   };
 
   return (
@@ -195,7 +227,7 @@ export default function ChallengeScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
     >
-      <TouchableOpacity onPress={() => router.replace("/(tabs)/dashboard")}>
+      <TouchableOpacity onPress={voltarDashboard}>
         <Text style={styles.backText}>← Voltar ao início</Text>
       </TouchableOpacity>
 
@@ -344,18 +376,18 @@ export default function ChallengeScreen() {
       {submitted ? (
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.replace("/(tabs)/dashboard")}
+          onPress={voltarDashboard}
         >
           <Text style={styles.buttonText}>VOLTAR AO INÍCIO</Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
-          disabled={!allAnswered}
-          style={[styles.button, !allAnswered && styles.disabledButton]}
+          disabled={!allAnswered || saving}
+          style={[styles.button, (!allAnswered || saving) && styles.disabledButton]}
           onPress={submitChallenge}
         >
           <Text style={styles.buttonText}>
-            {allAnswered ? "ENVIAR RESPOSTAS" : "RESPONDA TODAS AS QUESTÕES"}
+            {saving ? "SALVANDO..." : allAnswered ? "ENVIAR RESPOSTAS" : "RESPONDA TODAS AS QUESTÕES"}
           </Text>
         </TouchableOpacity>
       )}

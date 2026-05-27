@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -18,7 +18,7 @@ import capivara from "../../assets/avatars/capivara.webp";
 const API_URL = "https://x49aok4laf.execute-api.us-east-1.amazonaws.com";
 
 export default function Dashboard() {
-  const { usuario } = useAuth();
+  const { usuario, atualizarUsuario } = useAuth();
   const { theme } = useTheme();
   const { selectedAnimal } = useAvatar();
   const router = useRouter();
@@ -164,37 +164,54 @@ export default function Dashboard() {
     ],
   };
 
-  useEffect(() => {
-    carregarDados();
-
-    const interval = setInterval(() => {
-      carregarDados();
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [usuario?.email]);
-
-  const carregarDados = async () => {
-    if (!usuario?.email) return;
+  const carregarDados = useCallback(async () => {
+    if (!usuario?.email) {
+      setPerfil(null);
+      setProgresso([]);
+      return;
+    }
 
     try {
+      if (atualizarUsuario) {
+        await atualizarUsuario();
+      }
+
+      const emailEncoded = encodeURIComponent(usuario.email);
+
       const perfilResponse = await fetch(
-        `${API_URL}/usuarios/me?email=${usuario.email}`
+        `${API_URL}/usuarios/me?email=${emailEncoded}`
       );
 
-      const perfilData = await perfilResponse.json();
-      setPerfil(perfilData);
+      if (perfilResponse.ok) {
+        const perfilData = await perfilResponse.json();
+        setPerfil(perfilData);
+      } else {
+        console.log("Erro ao carregar perfil:", await perfilResponse.text());
+      }
 
       const progressoResponse = await fetch(
-        `${API_URL}/progresso?email=${usuario.email}`
+        `${API_URL}/progresso?email=${emailEncoded}`
       );
 
-      const progressoData = await progressoResponse.json();
-      setProgresso(progressoData);
+      if (progressoResponse.ok) {
+        const progressoData = await progressoResponse.json();
+        setProgresso(Array.isArray(progressoData) ? progressoData : []);
+      } else {
+        console.log(
+          "Erro ao carregar progresso:",
+          await progressoResponse.text()
+        );
+      }
     } catch (error) {
       console.log("Erro ao carregar dados:", error);
     }
-  };
+  }, [usuario?.email, atualizarUsuario]);
+
+  useFocusEffect(
+    useCallback(() => {
+      carregarDados();
+    }, [carregarDados])
+  );
 
   const getDesafiosDaTrilha = () => {
     return challengeSections[selectedTab].flatMap(
@@ -203,14 +220,16 @@ export default function Dashboard() {
   };
 
   const desafioConcluido = (id) => {
-    return progresso.some((item) => item.desafio?.id === id);
+    return progresso.some((item) => Number(item.desafio?.id) === Number(id));
   };
 
   const desafioBloqueado = (challengeId) => {
     const desafiosDaTrilha = getDesafiosDaTrilha();
-    const index = desafiosDaTrilha.findIndex((item) => item.id === challengeId);
+    const index = desafiosDaTrilha.findIndex(
+      (item) => Number(item.id) === Number(challengeId)
+    );
 
-    if (index === 0) return false;
+    if (index <= 0) return false;
 
     const desafioAnterior = desafiosDaTrilha[index - 1];
 
@@ -255,7 +274,9 @@ export default function Dashboard() {
 
   const getRouteByChallengeId = (challengeId) => {
     for (const section of challengeSections[selectedTab]) {
-      const found = section.challenges.find((item) => item.id === challengeId);
+      const found = section.challenges.find(
+        (item) => Number(item.id) === Number(challengeId)
+      );
 
       if (found) {
         return section.route;
@@ -266,7 +287,8 @@ export default function Dashboard() {
   };
 
   const renderAvatar = () => {
-    const avatar = avatarMap[selectedAnimal] || "🦉";
+    const avatarKey = perfil?.avatar || selectedAnimal;
+    const avatar = avatarMap[avatarKey] || "🦉";
 
     if (typeof avatar === "string") {
       return <Text style={styles.avatarEmoji}>{avatar}</Text>;
@@ -293,7 +315,7 @@ export default function Dashboard() {
           <Text style={styles.logoText}>doUAUlingo</Text>
 
           <Text style={[styles.welcome, { color: theme.text }]}>
-            Olá, {perfil?.nome?.split(" ")[0] || "Usuário"} 👋
+            Olá, {perfil?.nome?.split(" ")[0] || usuario?.nome?.split(" ")[0] || "Usuário"} 👋
           </Text>
 
           <Text style={[styles.subtitle, { color: theme.subtext }]}>
@@ -343,7 +365,7 @@ export default function Dashboard() {
         <View style={[styles.statCard, { backgroundColor: theme.card }]}>
           <Text style={styles.statEmoji}>🔥</Text>
           <Text style={[styles.statNumber, { color: theme.text }]}>
-            {perfil?.streak || 0}
+            {perfil?.streak ?? usuario?.streak ?? 0}
           </Text>
           <Text style={[styles.statLabel, { color: theme.subtext }]}>dias</Text>
         </View>
@@ -351,7 +373,7 @@ export default function Dashboard() {
         <View style={[styles.statCard, { backgroundColor: theme.card }]}>
           <Text style={styles.statEmoji}>⭐</Text>
           <Text style={[styles.statNumber, { color: theme.text }]}>
-            {perfil?.xp || 0}
+            {perfil?.xp ?? usuario?.xp ?? 0}
           </Text>
           <Text style={[styles.statLabel, { color: theme.subtext }]}>XP</Text>
         </View>
@@ -359,7 +381,7 @@ export default function Dashboard() {
         <View style={[styles.statCard, { backgroundColor: theme.card }]}>
           <Text style={styles.statEmoji}>🏆</Text>
           <Text style={[styles.statNumber, { color: theme.text }]}>
-            {perfil?.nivel || 1}
+            {perfil?.nivel ?? usuario?.nivel ?? 1}
           </Text>
           <Text style={[styles.statLabel, { color: theme.subtext }]}>
             nível

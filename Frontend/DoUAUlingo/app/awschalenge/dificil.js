@@ -1,3 +1,4 @@
+import { useAuth } from "../../contexts/AuthContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ScrollView,
@@ -8,7 +9,6 @@ import {
 } from "react-native";
 
 import { useTheme } from "../../contexts/ThemeContext";
-import { useAuth } from "../../contexts/AuthContext";
 
 const API_URL = "https://x49aok4laf.execute-api.us-east-1.amazonaws.com";
 
@@ -108,28 +108,50 @@ export default function ChallengeScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { theme } = useTheme();
-  const { usuario } = useAuth();
+  const { usuario, atualizarUsuario } = useAuth();
 
   const challenge = challenges.find((item) => item.id === String(id));
 
   const concluirDesafio = async () => {
     if (!challenge || !usuario?.email) {
-      router.replace("/(tabs)/dashboard");
+      console.log("Usuário ou desafio não encontrado para salvar progresso.");
+      router.replace("/(tabs)");
       return;
     }
 
     try {
-      await fetch(
-        `${API_URL}/progresso/concluir?email=${usuario.email}&desafioId=${challenge.id}`,
+      const response = await fetch(
+        `${API_URL}/progresso/concluir?email=${encodeURIComponent(
+          usuario.email
+        )}&desafioId=${challenge.id}`,
         {
           method: "POST",
         }
       );
+
+      if (!response.ok) {
+        const erro = await response.text();
+        console.log("Erro ao salvar progresso:", erro);
+        return;
+      }
+
+      if (atualizarUsuario) {
+        await atualizarUsuario();
+      }
+
+      console.log("Progresso salvo com sucesso!");
+      router.replace("/(tabs)");
     } catch (error) {
       console.log("Erro ao salvar progresso:", error);
     }
+  };
 
-    router.replace("/(tabs)/dashboard");
+  const voltarDashboard = async () => {
+    if (atualizarUsuario) {
+      await atualizarUsuario();
+    }
+
+    router.replace("/(tabs)");
   };
 
   if (!challenge) {
@@ -141,7 +163,7 @@ export default function ChallengeScreen() {
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.replace("/(tabs)/dashboard")}
+          onPress={voltarDashboard}
         >
           <Text style={styles.buttonText}>VOLTAR</Text>
         </TouchableOpacity>
@@ -154,7 +176,7 @@ export default function ChallengeScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
     >
-      <TouchableOpacity onPress={() => router.replace("/(tabs)/dashboard")}>
+      <TouchableOpacity onPress={voltarDashboard}>
         <Text style={styles.backText}>← Voltar</Text>
       </TouchableOpacity>
 
@@ -212,7 +234,7 @@ export default function ChallengeScreen() {
 
       <TouchableOpacity
         style={styles.backBottomButton}
-        onPress={() => router.replace("/(tabs)/dashboard")}
+        onPress={voltarDashboard}
       >
         <Text style={styles.backBottomText}>
           ← Voltar ao Dashboard
