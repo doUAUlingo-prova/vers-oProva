@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext();
 
-const API_URL = "http://54.147.53.129:8080";
+const API_URL = "https://x49aok4laf.execute-api.us-east-1.amazonaws.com";
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState(null);

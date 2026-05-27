@@ -14,7 +14,7 @@ import {
   View,
 } from "react-native";
 
-const API_URL = "http://54.147.53.129:8080";
+const API_URL = "https://x49aok4laf.execute-api.us-east-1.amazonaws.com";
 
 export default function RegisterPage() {
   const router = useRouter();

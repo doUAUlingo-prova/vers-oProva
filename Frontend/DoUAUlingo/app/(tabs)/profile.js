@@ -17,7 +17,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 
 import capivara from "../../assets/avatars/capivara.webp";
 
-const API_URL = "http://54.147.53.129:8080";
+const API_URL = "https://x49aok4laf.execute-api.us-east-1.amazonaws.com";
 
 export default function Profile() {
   const { usuario, logout } = useAuth();
