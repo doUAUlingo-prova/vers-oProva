@@ -37,7 +37,6 @@ export default function LoginPage() {
     } else {
       setError(result.message || "E-mail ou senha inválidos.");
     }
-  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -246,3 +245,4 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
 });
+}
