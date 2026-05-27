@@ -10,6 +10,9 @@ import {
 
 import { useTheme } from "../../contexts/ThemeContext";
 
+const API_URL = "https://x49aok4laf.execute-api.us-east-1.amazonaws.com";
+
+
 const challenges = [
   {
     id: "1",
