@@ -6,7 +6,7 @@ import { AvatarProvider } from "../contexts/AvatarContext";
 import { ThemeProvider, useTheme } from "../contexts/ThemeContext";
 
 function RootNavigator() {
-  const { isAuthenticated, loading } = useAuth();
+  const { usuario, loading } = useAuth(); // trocado isAuthenticated por usuario
   const { theme } = useTheme();
 
   if (loading) {
@@ -33,11 +33,16 @@ function RootNavigator() {
         },
       }}
     >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="register" />
-      <Stack.Screen name="forgot-password" />
-      <Stack.Screen name="(tabs)" />
+      {!usuario ? (
+        <>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="login" />
+          <Stack.Screen name="register" />
+          <Stack.Screen name="forgot-password" />
+        </>
+      ) : (
+        <Stack.Screen name="(tabs)" />
+      )}
     </Stack>
   );
 }
