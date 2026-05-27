@@ -219,7 +219,7 @@ export default function ChallengeScreen() {
       await atualizarUsuario();
     }
 
-    router.replace("/(tabs)");
+    router.replace("/");
   };
 
   return (

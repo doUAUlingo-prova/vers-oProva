@@ -115,7 +115,7 @@ export default function ChallengeScreen() {
   const concluirDesafio = async () => {
     if (!challenge || !usuario?.email) {
       console.log("Usuário ou desafio não encontrado para salvar progresso.");
-      router.replace("/(tabs)");
+      router.replace("/");
       return;
     }
 
@@ -140,7 +140,7 @@ export default function ChallengeScreen() {
       }
 
       console.log("Progresso salvo com sucesso!");
-      router.replace("/(tabs)");
+      router.replace("/");
     } catch (error) {
       console.log("Erro ao salvar progresso:", error);
     }
@@ -151,7 +151,7 @@ export default function ChallengeScreen() {
       await atualizarUsuario();
     }
 
-    router.replace("/(tabs)");
+    router.replace("/");
   };
 
   if (!challenge) {
