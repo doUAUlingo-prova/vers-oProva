@@ -1,18 +1,8 @@
 import { Stack } from "expo-router";
 import { useAuth } from "../contexts/AuthContext";
-import { View, ActivityIndicator } from "react-native";
 
 export default function RootNavigator() {
-  const { usuario, loading } = useAuth();
-
-  // Enquanto carrega os dados do usuário, mostra loading
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#58cc02" />
-      </View>
-    );
-  }
+  const { usuario } = useAuth();
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

@@ -37,6 +37,7 @@ export default function LoginPage() {
     } else {
       setError(result.message || "E-mail ou senha inválidos.");
     }
+  }; // <--- O erro estava aqui! Faltava fechar esta chave.
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -116,39 +117,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
   },
-
   container: {
     flex: 1,
     paddingHorizontal: 22,
   },
-
   header: {
     paddingVertical: 18,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   logoText: {
     fontSize: 22,
     fontWeight: "900",
     color: "#58cc02",
     letterSpacing: 1,
   },
-
   backText: {
     fontSize: 14,
     fontWeight: "900",
     color: "#1cb0f6",
   },
-
   card: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingBottom: 40,
   },
-
   logoCircle: {
     width: 145,
     height: 145,
@@ -160,13 +155,11 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: "#58cc02",
   },
-
   logoImage: {
     width: 100,
     height: 100,
     resizeMode: "contain",
   },
-
   title: {
     fontSize: 28,
     fontWeight: "900",
@@ -174,7 +167,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 24,
   },
-
   input: {
     width: "100%",
     backgroundColor: "#f7f7f7",
@@ -188,14 +180,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
   },
-
   error: {
     color: "#ff4b4b",
     marginBottom: 10,
     textAlign: "center",
     fontWeight: "800",
   },
-
   primaryButton: {
     width: "100%",
     backgroundColor: "#58cc02",
@@ -206,13 +196,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 5,
     borderBottomColor: "#46a302",
   },
-
   primaryText: {
     color: "#fff",
     fontSize: 15,
     fontWeight: "900",
   },
-
   secondaryButton: {
     width: "100%",
     backgroundColor: "#fff",
@@ -225,13 +213,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 5,
     borderBottomColor: "#d1d1d1",
   },
-
   secondaryText: {
     color: "#1cb0f6",
     fontSize: 15,
     fontWeight: "900",
   },
-
   register: {
     color: "#777",
     textAlign: "center",
@@ -239,10 +225,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
-
   registerBold: {
     color: "#58cc02",
     fontWeight: "900",
   },
 });
-}
