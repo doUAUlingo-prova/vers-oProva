@@ -58,26 +58,47 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, senha) => {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, senha }),
-    });
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          senha,
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error("E-mail ou senha inválidos.");
+      if (!response.ok) {
+        const erro = await response.text();
+        console.log("Erro no login:", erro);
+
+        return {
+          success: false,
+          message: "E-mail ou senha inválidos.",
+        };
+      }
+
+      const data = await response.json();
+
+      const user = data.usuario || data.user || data;
+
+      setUsuario(user);
+      await AsyncStorage.setItem("usuario", JSON.stringify(user));
+
+      return {
+        success: true,
+        user,
+      };
+    } catch (error) {
+      console.log("Erro ao fazer login:", error);
+
+      return {
+        success: false,
+        message: "Erro ao conectar com o servidor.",
+      };
     }
-
-    const data = await response.json();
-
-    const user = data.usuario || data;
-
-    setUsuario(user);
-    await AsyncStorage.setItem("usuario", JSON.stringify(user));
-
-    return user;
   };
 
   const register = async (nome, email, senha) => {
