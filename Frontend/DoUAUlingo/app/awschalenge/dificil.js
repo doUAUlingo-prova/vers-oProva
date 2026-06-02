@@ -1,5 +1,11 @@
+// Importa o contexto de autenticação.
+// Usado para acessar o usuário logado e atualizar XP, nível e progresso.
 import { useAuth } from "../../contexts/AuthContext";
+
+// Obtém parâmetros da URL e permite navegação entre telas.
 import { useLocalSearchParams, useRouter } from "expo-router";
+
+// Componentes visuais do React Native.
 import {
   ScrollView,
   StyleSheet,
@@ -8,118 +14,169 @@ import {
   View,
 } from "react-native";
 
+// Contexto de tema.
+// Permite aplicar modo claro e escuro.
 import { useTheme } from "../../contexts/ThemeContext";
 
-const API_URL = "https://x49aok4laf.execute-api.us-east-1.amazonaws.com";
+// URL do backend local.
+const API_URL = "http://localhost:8080";
 
+// Lista de desafios disponíveis nesta tela.
+// Neste caso temos apenas o desafio AWS Difícil.
 const challenges = [
   {
     id: "3",
+
+    // Categoria da trilha.
     category: "AWS",
+
+    // Nível do desafio.
     level: "Difícil",
+
+    // Nome do desafio.
     title: "EC2 acessando S3",
+
+    // Emoji ilustrativo.
     emoji: "🔐",
+
+    // XP ganho ao concluir.
     xp: 250,
 
+    // Conteúdo educacional apresentado antes do desafio.
     tutorial: [
       {
         title: "O que você vai aprender",
         text:
-          "Neste módulo avançado você irá compreender como funciona a comunicação segura entre serviços da AWS utilizando IAM Roles e políticas de permissão.\n\nO foco principal será permitir que uma instância EC2 consiga acessar buckets S3 de forma segura, sem utilizar credenciais fixas dentro da aplicação.",
+          "Neste módulo avançado você irá compreender como funciona a comunicação segura entre serviços da AWS utilizando IAM Roles e políticas de permissão.",
       },
+
       {
         title: "Cenário do Projeto",
         text:
-          "Imagine uma aplicação hospedada em uma instância EC2 que precisa ler arquivos armazenados no S3, fazer upload de backups, processar imagens, ler arquivos JSON e hospedar arquivos estáticos.\n\nPor segurança, não é recomendado armazenar AWS Access Key e AWS Secret Key diretamente no servidor.\n\nPara resolver isso utilizamos IAM Roles, Temporary Credentials e Security Policies.",
+          "Aplicações hospedadas em EC2 frequentemente precisam acessar arquivos armazenados no S3.",
       },
+
       {
         title: "O que é IAM?",
         text:
-          "O IAM é o serviço da AWS responsável por controle de acesso, autenticação, autorização, gerenciamento de usuários e permissões.",
+          "Serviço responsável pelo gerenciamento de usuários, permissões e acessos da AWS.",
       },
+
       {
         title: "O que é uma IAM Role?",
         text:
-          "Uma IAM Role é uma identidade temporária utilizada por serviços AWS para acessar outros recursos de forma segura.",
+          "Identidade temporária utilizada por serviços AWS para acessar recursos com segurança.",
       },
+
       {
         title: "EC2 utilizando IAM Role",
         text:
-          "Quando associamos uma IAM Role à EC2, a AWS fornece permissões temporárias automaticamente para a instância.",
+          "A AWS fornece credenciais temporárias automaticamente para a instância.",
       },
+
       {
         title: "Segurança em ambientes cloud",
         text:
-          "A abordagem correta é utilizar IAM Roles, aplicar o princípio do menor privilégio e evitar credenciais fixas no código.",
+          "Utilizar IAM Roles e evitar credenciais fixas dentro do código.",
       },
+
       {
         title: "Estrutura da arquitetura",
         text:
-          "Usuário\n ↓\nEC2\n ↓\nIAM Role\n ↓\nAWS STS\n ↓\nTemporary Credentials\n ↓\nAmazon S3",
+          "Usuário → EC2 → IAM Role → AWS STS → Credenciais Temporárias → S3",
       },
+
       {
         title: "Etapa 1 — Criando Bucket S3",
         text:
-          "1. Abrir Amazon S3\n2. Criar bucket\n3. Definir nome único, região, bloqueio público e versionamento opcional.",
+          "Criar bucket, configurar região e permissões.",
       },
+
       {
         title: "Etapa 2 — Criando a EC2",
         text:
-          "Configure uma instância usando Amazon Linux, t2.micro, Security Group, chave SSH e IAM Role.",
+          "Criar instância EC2 com Security Group e IAM Role.",
       },
+
       {
         title: "Etapa 3 — Criando IAM Role",
         text:
-          "1. Abrir IAM\n2. Roles\n3. Create Role\n4. AWS Service\n5. EC2",
+          "Criar uma Role específica para EC2.",
       },
+
       {
         title: "Etapa 4 — Criando Política de Permissão",
         text:
-          "Permissões principais:\n\n• s3:ListBucket\n• s3:GetObject",
+          "Permitir ListBucket e GetObject.",
       },
+
       {
         title: "Associando Role à EC2",
         text:
-          "Abrir EC2 → Actions → Security → Modify IAM Role → Selecionar Role.",
+          "Vincular a IAM Role à instância.",
       },
+
       {
         title: "Testando acesso ao S3",
         text:
-          "aws s3 ls\n\naws s3 ls s3://empresa-backups-s3",
+          "Executar comandos AWS CLI para validar acesso.",
       },
+
       {
         title: "Possíveis erros comuns",
         text:
-          "Access Denied, NoCredentialsError, Bucket inexistente e Região incorreta.",
+          "AccessDenied, credenciais inexistentes ou bucket incorreto.",
       },
+
       {
         title: "Boas práticas profissionais",
         text:
-          "Nunca usar credenciais fixas, utilizar IAM Roles, criptografia e monitoramento.",
+          "Utilizar IAM Roles, criptografia e princípio do menor privilégio.",
       },
     ],
 
+    // Desafio final apresentado ao aluno.
     finalChallenge:
       "Configure uma EC2 com acesso seguro ao S3 utilizando IAM Roles e políticas de permissão.",
   },
 ];
 
+// Tela principal do desafio.
 export default function ChallengeScreen() {
+
+  // Obtém o ID recebido pela rota.
   const { id } = useLocalSearchParams();
+
+  // Permite navegação entre telas.
   const router = useRouter();
+
+  // Obtém as cores do tema atual.
   const { theme } = useTheme();
+
+  // Obtém usuário e função de atualização.
   const { usuario, atualizarUsuario } = useAuth();
 
-  const challenge = challenges.find((item) => item.id === String(id));
+  // Procura o desafio correspondente ao ID recebido.
+  const challenge = challenges.find(
+    (item) => item.id === String(id)
+  );
 
+  // Função chamada ao concluir o desafio.
   const concluirDesafio = async () => {
+
+    // Se não encontrar desafio ou usuário.
     if (!challenge || !usuario?.email) {
-      console.log("Usuário ou desafio não encontrado para salvar progresso.");
-      router.replace("/(tabs)/dashboard"); // opcional, ou poderia ser "/(tabs)/dashboard"
+      console.log(
+        "Usuário ou desafio não encontrado para salvar progresso."
+      );
+
+      router.replace("(tabs)/dashboard");
       return;
     }
 
     try {
+
+      // Envia ao backend que o desafio foi concluído.
       const response = await fetch(
         `${API_URL}/progresso/concluir?email=${encodeURIComponent(
           usuario.email
@@ -129,35 +186,64 @@ export default function ChallengeScreen() {
         }
       );
 
+      // Se ocorrer erro.
       if (!response.ok) {
         const erro = await response.text();
-        console.log("Erro ao salvar progresso:", erro);
+
+        console.log(
+          "Erro ao salvar progresso:",
+          erro
+        );
+
         return;
       }
 
+      // Atualiza XP, nível e streak.
       if (atualizarUsuario) {
         await atualizarUsuario();
       }
 
-      console.log("Progresso salvo com sucesso!");
-      router.replace("/(tabs)/dashboard"); // Redireciona para dashboard
+      console.log(
+        "Progresso salvo com sucesso!"
+      );
+
+      // Volta ao dashboard.
+      router.replace("(tabs)/dashboard");
+
     } catch (error) {
-      console.log("Erro ao salvar progresso:", error);
+      console.log(
+        "Erro ao salvar progresso:",
+        error
+      );
     }
   };
 
+  // Função para voltar ao dashboard.
   const voltarDashboard = async () => {
+
+    // Atualiza usuário antes de voltar.
     if (atualizarUsuario) {
       await atualizarUsuario();
     }
 
-    router.replace("/(tabs)/dashboard"); // Corrigido
+    router.replace("(tabs)/dashboard");
   };
 
+  // Caso o desafio não seja encontrado.
   if (!challenge) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <Text style={[styles.errorTitle, { color: theme.text }]}>
+      <View
+        style={[
+          styles.center,
+          { backgroundColor: theme.background },
+        ]}
+      >
+        <Text
+          style={[
+            styles.errorTitle,
+            { color: theme.text },
+          ]}
+        >
           Desafio não encontrado 😵
         </Text>
 
@@ -165,64 +251,125 @@ export default function ChallengeScreen() {
           style={styles.button}
           onPress={voltarDashboard}
         >
-          <Text style={styles.buttonText}>VOLTAR</Text>
+          <Text style={styles.buttonText}>
+            VOLTAR
+          </Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
+
+    // Tela com rolagem.
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
+      style={[
+        styles.container,
+        { backgroundColor: theme.background },
+      ]}
       contentContainerStyle={styles.content}
     >
+
+      {/* Botão voltar */}
       <TouchableOpacity onPress={voltarDashboard}>
-        <Text style={styles.backText}>← Voltar</Text>
+        <Text style={styles.backText}>
+          ← Voltar
+        </Text>
       </TouchableOpacity>
 
-      <View style={[styles.heroCard, { backgroundColor: theme.card }]}>
-        <Text style={styles.emoji}>{challenge.emoji}</Text>
+      {/* Card principal do desafio */}
+      <View
+        style={[
+          styles.heroCard,
+          { backgroundColor: theme.card },
+        ]}
+      >
+        <Text style={styles.emoji}>
+          {challenge.emoji}
+        </Text>
 
-        <Text style={[styles.category, { color: theme.subtext }]}>
+        <Text
+          style={[
+            styles.category,
+            { color: theme.subtext },
+          ]}
+        >
           {challenge.category} • {challenge.level}
         </Text>
 
-        <Text style={[styles.title, { color: theme.text }]}>
+        <Text
+          style={[
+            styles.title,
+            { color: theme.text },
+          ]}
+        >
           {challenge.title}
         </Text>
 
-        <Text style={styles.xp}>+{challenge.xp} XP</Text>
+        <Text style={styles.xp}>
+          +{challenge.xp} XP
+        </Text>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>
+      {/* Título da seção de aprendizado */}
+      <Text
+        style={[
+          styles.sectionTitle,
+          { color: theme.text },
+        ]}
+      >
         Aprenda antes do desafio
       </Text>
 
+      {/* Renderiza todo o conteúdo do tutorial */}
       {challenge.tutorial.map((topic, index) => (
         <View
           key={index}
-          style={[styles.topicCard, { backgroundColor: theme.card }]}
+          style={[
+            styles.topicCard,
+            { backgroundColor: theme.card },
+          ]}
         >
-          <Text style={styles.topicNumber}>0{index + 1}</Text>
+          <Text style={styles.topicNumber}>
+            0{index + 1}
+          </Text>
 
-          <Text style={[styles.topicTitle, { color: theme.text }]}>
+          <Text
+            style={[
+              styles.topicTitle,
+              { color: theme.text },
+            ]}
+          >
             {topic.title}
           </Text>
 
-          <Text style={[styles.topicText, { color: theme.subtext }]}>
+          <Text
+            style={[
+              styles.topicText,
+              { color: theme.subtext },
+            ]}
+          >
             {topic.text}
           </Text>
         </View>
       ))}
 
+      {/* Card do desafio final */}
       <View style={styles.finalCard}>
-        <Text style={styles.finalEmoji}>🎯</Text>
+        <Text style={styles.finalEmoji}>
+          🎯
+        </Text>
 
-        <Text style={styles.finalTitle}>Desafio Final</Text>
+        <Text style={styles.finalTitle}>
+          Desafio Final
+        </Text>
 
-        <Text style={styles.finalText}>{challenge.finalChallenge}</Text>
+        <Text style={styles.finalText}>
+          {challenge.finalChallenge}
+        </Text>
       </View>
 
+      {/* Botão para concluir desafio */}
       <TouchableOpacity
         style={styles.button}
         onPress={concluirDesafio}
@@ -232,6 +379,7 @@ export default function ChallengeScreen() {
         </Text>
       </TouchableOpacity>
 
+      {/* Botão de retorno */}
       <TouchableOpacity
         style={styles.backBottomButton}
         onPress={voltarDashboard}

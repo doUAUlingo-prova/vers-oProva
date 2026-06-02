@@ -1,6 +1,16 @@
+// Importa o contexto de autenticação.
+// Usado para acessar o usuário logado e atualizar seu progresso.
 import { useAuth } from "../../contexts/AuthContext";
+
+// Importa recursos do Expo Router.
+// useLocalSearchParams pega parâmetros da URL.
+// useRouter permite navegar entre telas.
 import { useLocalSearchParams, useRouter } from "expo-router";
+
+// Hooks do React.
 import { useMemo, useState } from "react";
+
+// Componentes visuais do React Native.
 import {
   ScrollView,
   StyleSheet,
@@ -9,10 +19,14 @@ import {
   View,
 } from "react-native";
 
+// Contexto de tema.
 import { useTheme } from "../../contexts/ThemeContext";
 
-const API_URL = "https://x49aok4laf.execute-api.us-east-1.amazonaws.com";
+// URL do backend local.
+const API_URL = "http://localhost:8080";
 
+// Lista de desafios desta tela.
+// Aqui temos o desafio Expo Médio.
 const challenges = [
   {
     id: "5",
@@ -98,6 +112,7 @@ const challenges = [
   },
 ];
 
+// Embaralha as alternativas.
 function shuffleArray(array) {
   return [...array].sort(() => Math.random() - 0.5);
 }
@@ -118,6 +133,7 @@ export default function ChallengeScreen() {
 
   const shuffledQuestions = useMemo(() => {
     if (!challenge) return [];
+
     return challenge.questions.map((question) => ({
       ...question,
       options: shuffleArray(question.options),
@@ -131,7 +147,7 @@ export default function ChallengeScreen() {
           Desafio não encontrado 😵
         </Text>
 
-        <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
+        <TouchableOpacity onPress={() => router.replace("(tabs)/dashboard")}>
           <Text style={styles.backText}>← Voltar ao início</Text>
         </TouchableOpacity>
       </View>
@@ -139,6 +155,7 @@ export default function ChallengeScreen() {
   }
 
   const totalQuestions = shuffledQuestions.length;
+
   const correctAnswers = shuffledQuestions.filter(
     (item, index) => selectedAnswers[index] === item.answer
   ).length;
@@ -160,7 +177,10 @@ export default function ChallengeScreen() {
     }));
 
     if (isCorrect) {
-      setLockedQuestions((prev) => ({ ...prev, [questionIndex]: true }));
+      setLockedQuestions((prev) => ({
+        ...prev,
+        [questionIndex]: true,
+      }));
       return;
     }
 
@@ -169,7 +189,10 @@ export default function ChallengeScreen() {
       return;
     }
 
-    setLockedQuestions((prev) => ({ ...prev, [questionIndex]: true }));
+    setLockedQuestions((prev) => ({
+      ...prev,
+      [questionIndex]: true,
+    }));
   };
 
   const submitChallenge = async () => {
@@ -219,7 +242,7 @@ export default function ChallengeScreen() {
       await atualizarUsuario();
     }
 
-    router.replace("/(tabs)/dashboard");
+    router.replace("(tabs)/dashboard");
   };
 
   return (
@@ -374,20 +397,24 @@ export default function ChallengeScreen() {
       )}
 
       {submitted ? (
-        <TouchableOpacity
-          style={styles.button}
-          onPress={voltarDashboard}
-        >
+        <TouchableOpacity style={styles.button} onPress={voltarDashboard}>
           <Text style={styles.buttonText}>VOLTAR AO INÍCIO</Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
           disabled={!allAnswered || saving}
-          style={[styles.button, (!allAnswered || saving) && styles.disabledButton]}
+          style={[
+            styles.button,
+            (!allAnswered || saving) && styles.disabledButton,
+          ]}
           onPress={submitChallenge}
         >
           <Text style={styles.buttonText}>
-            {saving ? "SALVANDO..." : allAnswered ? "ENVIAR RESPOSTAS" : "RESPONDA TODAS AS QUESTÕES"}
+            {saving
+              ? "SALVANDO..."
+              : allAnswered
+              ? "ENVIAR RESPOSTAS"
+              : "RESPONDA TODAS AS QUESTÕES"}
           </Text>
         </TouchableOpacity>
       )}

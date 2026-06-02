@@ -1,5 +1,14 @@
+// Importa o useFocusEffect e o useRouter do Expo Router.
+// useFocusEffect executa uma ação sempre que a tela entra em foco.
+// useRouter permite navegar para outras telas.
 import { useFocusEffect, useRouter } from "expo-router";
+
+// Importa hooks do React.
+// useCallback evita recriar funções sem necessidade.
+// useState armazena estados da tela.
 import { useCallback, useState } from "react";
+
+// Importa componentes visuais do React Native.
 import {
   Image,
   ScrollView,
@@ -9,24 +18,49 @@ import {
   View,
 } from "react-native";
 
+// Contexto de autenticação.
+// Usado para acessar o usuário logado e atualizar seus dados.
 import { useAuth } from "../../contexts/AuthContext";
+
+// Contexto de avatar.
+// Usado para acessar o avatar escolhido pelo usuário.
 import { useAvatar } from "../../contexts/AvatarContext";
+
+// Contexto de tema.
+// Usado para aplicar tema claro/escuro na tela.
 import { useTheme } from "../../contexts/ThemeContext";
 
+// Importa imagem local da capivara.
 import capivara from "../../assets/avatars/capivara.webp";
 
-const API_URL = "https://x49aok4laf.execute-api.us-east-1.amazonaws.com";
+// URL do backend local.
+const API_URL = "http://localhost:8080";
 
+// Componente principal do Dashboard.
 export default function Dashboard() {
+  // Obtém o usuário logado e a função para atualizar os dados do usuário.
   const { usuario, atualizarUsuario } = useAuth();
+
+  // Obtém as cores do tema atual.
   const { theme } = useTheme();
+
+  // Obtém o animal/avatar selecionado.
   const { selectedAnimal } = useAvatar();
+
+  // Permite navegar entre telas.
   const router = useRouter();
 
+  // Controla qual trilha está selecionada: AWS ou Expo.
   const [selectedTab, setSelectedTab] = useState("AWS");
+
+  // Armazena os dados do perfil vindos do backend.
   const [perfil, setPerfil] = useState(null);
+
+  // Armazena os desafios concluídos pelo usuário.
   const [progresso, setProgresso] = useState([]);
 
+  // Mapeia os avatares disponíveis.
+  // Alguns são emojis e a capivara é uma imagem local.
   const avatarMap = {
     owl: "🦉",
     cat: "🐱",
@@ -38,6 +72,7 @@ export default function Dashboard() {
     koala: "🐨",
     capybara: capivara,
 
+    // Também aceita emojis salvos diretamente.
     "🦉": "🦉",
     "🐱": "🐱",
     "🐶": "🐶",
@@ -48,6 +83,7 @@ export default function Dashboard() {
     "🐨": "🐨",
   };
 
+  // Define as trilhas, níveis e desafios disponíveis no app.
   const challengeSections = {
     AWS: [
       {
@@ -164,7 +200,9 @@ export default function Dashboard() {
     ],
   };
 
+  // Função responsável por carregar os dados do usuário e progresso.
   const carregarDados = useCallback(async () => {
+    // Se não existir usuário logado, limpa os dados da tela.
     if (!usuario?.email) {
       setPerfil(null);
       setProgresso([]);
@@ -172,16 +210,20 @@ export default function Dashboard() {
     }
 
     try {
+      // Atualiza os dados do usuário no contexto, se a função existir.
       if (atualizarUsuario) {
         await atualizarUsuario();
       }
 
+      // Codifica o e-mail para evitar problemas com caracteres especiais na URL.
       const emailEncoded = encodeURIComponent(usuario.email);
 
+      // Busca os dados do perfil no backend.
       const perfilResponse = await fetch(
         `${API_URL}/usuarios/me?email=${emailEncoded}`
       );
 
+      // Se a resposta for OK, salva o perfil no estado.
       if (perfilResponse.ok) {
         const perfilData = await perfilResponse.json();
         setPerfil(perfilData);
@@ -189,12 +231,16 @@ export default function Dashboard() {
         console.log("Erro ao carregar perfil:", await perfilResponse.text());
       }
 
+      // Busca o progresso do usuário no backend.
       const progressoResponse = await fetch(
         `${API_URL}/progresso?email=${emailEncoded}`
       );
 
+      // Se a resposta for OK, salva a lista de progresso.
       if (progressoResponse.ok) {
         const progressoData = await progressoResponse.json();
+
+        // Garante que o progresso seja sempre um array.
         setProgresso(Array.isArray(progressoData) ? progressoData : []);
       } else {
         console.log(
@@ -203,51 +249,67 @@ export default function Dashboard() {
         );
       }
     } catch (error) {
+      // Caso ocorra erro de conexão ou erro inesperado.
       console.log("Erro ao carregar dados:", error);
     }
   }, [usuario?.email, atualizarUsuario]);
 
+  // Executa carregarDados sempre que o Dashboard entra em foco.
+  // Isso atualiza XP, nível e progresso quando o usuário volta de uma lição.
   useFocusEffect(
     useCallback(() => {
       carregarDados();
     }, [carregarDados])
   );
 
+  // Retorna todos os desafios da trilha selecionada.
   const getDesafiosDaTrilha = () => {
     return challengeSections[selectedTab].flatMap(
       (section) => section.challenges
     );
   };
 
+  // Verifica se um desafio já foi concluído.
   const desafioConcluido = (id) => {
     return progresso.some((item) => Number(item.desafio?.id) === Number(id));
   };
 
+  // Verifica se um desafio deve ficar bloqueado.
+  // Um desafio só é liberado se o desafio anterior foi concluído.
   const desafioBloqueado = (challengeId) => {
     const desafiosDaTrilha = getDesafiosDaTrilha();
+
     const index = desafiosDaTrilha.findIndex(
       (item) => Number(item.id) === Number(challengeId)
     );
 
+    // O primeiro desafio da trilha nunca fica bloqueado.
     if (index <= 0) return false;
 
+    // Pega o desafio anterior.
     const desafioAnterior = desafiosDaTrilha[index - 1];
 
+    // Se o anterior não foi concluído, este fica bloqueado.
     return !desafioConcluido(desafioAnterior.id);
   };
 
+  // Calcula a porcentagem de progresso da trilha selecionada.
   const getProgressoTrilha = () => {
     const desafiosDaTrilha = getDesafiosDaTrilha();
 
+    // Evita divisão por zero.
     if (desafiosDaTrilha.length === 0) return 0;
 
+    // Conta quantos desafios foram concluídos.
     const concluidos = desafiosDaTrilha.filter((desafio) =>
       desafioConcluido(desafio.id)
     ).length;
 
+    // Retorna a porcentagem concluída.
     return Math.floor((concluidos / desafiosDaTrilha.length) * 100);
   };
 
+  // Retorna a aula atual, ou seja, o próximo desafio não concluído.
   const getAulaAtual = () => {
     const desafiosDaTrilha = getDesafiosDaTrilha();
 
@@ -255,6 +317,7 @@ export default function Dashboard() {
       (desafio) => !desafioConcluido(desafio.id)
     );
 
+    // Se não houver próxima aula, a trilha foi concluída.
     if (!proximaAula) {
       return `${selectedTab}: trilha concluída!`;
     }
@@ -262,6 +325,7 @@ export default function Dashboard() {
     return `${selectedTab}: ${proximaAula.title}`;
   };
 
+  // Busca a primeira aula disponível para o usuário iniciar.
   const getPrimeiraAulaDisponivel = () => {
     const desafiosDaTrilha = getDesafiosDaTrilha();
 
@@ -269,9 +333,11 @@ export default function Dashboard() {
       (desafio) => !desafioConcluido(desafio.id) && !desafioBloqueado(desafio.id)
     );
 
+    // Se não encontrar, retorna o primeiro desafio da trilha.
     return proximaAula || desafiosDaTrilha[0];
   };
 
+  // Descobre a rota de navegação de acordo com o ID do desafio.
   const getRouteByChallengeId = (challengeId) => {
     for (const section of challengeSections[selectedTab]) {
       const found = section.challenges.find(
@@ -283,37 +349,51 @@ export default function Dashboard() {
       }
     }
 
+    // Retorno padrão caso não encontre.
     return challengeSections[selectedTab][0].route;
   };
 
+  // Renderiza o avatar do usuário.
   const renderAvatar = () => {
+    // Usa o avatar salvo no perfil ou o avatar selecionado localmente.
     const avatarKey = perfil?.avatar || selectedAnimal;
+
+    // Busca o avatar no mapa. Se não encontrar, usa a coruja.
     const avatar = avatarMap[avatarKey] || "🦉";
 
+    // Se o avatar for texto, renderiza como emoji.
     if (typeof avatar === "string") {
       return <Text style={styles.avatarEmoji}>{avatar}</Text>;
     }
 
+    // Se for imagem, renderiza com o componente Image.
     return <Image source={avatar} style={styles.avatarImage} />;
   };
 
+  // Inicia uma lição.
   const startLevel = (route, challengeId) => {
+    // Se o desafio estiver bloqueado, não permite entrar.
     if (desafioBloqueado(challengeId)) return;
 
+    // Navega para a rota do desafio.
     router.push(route);
   };
 
+  // Calcula o progresso da trilha atual.
   const progressoTrilha = getProgressoTrilha();
 
   return (
+    // ScrollView permite rolar a tela.
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
     >
+      {/* Cabeçalho com logo, saudação e avatar */}
       <View style={styles.header}>
         <View>
           <Text style={styles.logoText}>doUAUlingo</Text>
 
+          {/* Saudação usando o primeiro nome do usuário */}
           <Text style={[styles.welcome, { color: theme.text }]}>
             Olá, {perfil?.nome?.split(" ")[0] || usuario?.nome?.split(" ")[0] || "Usuário"} 👋
           </Text>
@@ -323,9 +403,11 @@ export default function Dashboard() {
           </Text>
         </View>
 
+        {/* Avatar do usuário */}
         <View style={styles.avatarCircle}>{renderAvatar()}</View>
       </View>
 
+      {/* Card principal com progresso da trilha */}
       <View style={[styles.mainCard, { backgroundColor: theme.card }]}>
         <Text style={[styles.cardTitle, { color: theme.subtext }]}>
           Seu progresso em {selectedTab}
@@ -339,6 +421,7 @@ export default function Dashboard() {
           {getAulaAtual()}
         </Text>
 
+        {/* Barra de progresso */}
         <View
           style={[
             styles.progressBar,
@@ -361,6 +444,7 @@ export default function Dashboard() {
         </Text>
       </View>
 
+      {/* Cards de estatísticas do usuário */}
       <View style={styles.statsRow}>
         <View style={[styles.statCard, { backgroundColor: theme.card }]}>
           <Text style={styles.statEmoji}>🔥</Text>
@@ -389,10 +473,12 @@ export default function Dashboard() {
         </View>
       </View>
 
+      {/* Título da seleção de trilhas */}
       <Text style={[styles.sectionTitle, { color: theme.text }]}>
         Escolha sua trilha
       </Text>
 
+      {/* Botões para trocar entre trilha AWS e Expo */}
       <View style={styles.tabs}>
         <TouchableOpacity
           style={[styles.tabButton, selectedTab === "AWS" && styles.activeTab]}
@@ -423,16 +509,22 @@ export default function Dashboard() {
         </TouchableOpacity>
       </View>
 
+      {/* Renderiza os níveis e desafios da trilha selecionada */}
       {challengeSections[selectedTab].map((levelData) => (
         <View key={levelData.level} style={styles.levelContainer}>
+          {/* Badge do nível: Fácil, Médio ou Difícil */}
           <View
             style={[styles.levelBadge, { backgroundColor: levelData.color }]}
           >
             <Text style={styles.levelText}>{levelData.level}</Text>
           </View>
 
+          {/* Renderiza os desafios dentro de cada nível */}
           {levelData.challenges.map((challenge) => {
+            // Verifica se o desafio foi concluído.
             const concluido = desafioConcluido(challenge.id);
+
+            // Verifica se o desafio está bloqueado.
             const bloqueado = desafioBloqueado(challenge.id);
 
             return (
@@ -441,21 +533,28 @@ export default function Dashboard() {
                 style={[
                   styles.challengeCard,
                   { backgroundColor: theme.card },
+
+                  // Aplica estilo de bloqueado se necessário.
                   bloqueado && styles.challengeBlocked,
+
+                  // Aplica estilo de concluído se necessário.
                   concluido && styles.challengeDone,
                 ]}
               >
+                {/* Ícone ou cadeado do desafio */}
                 <View style={styles.challengeIcon}>
                   <Text style={styles.challengeEmoji}>
                     {bloqueado ? "🔒" : challenge.emoji}
                   </Text>
                 </View>
 
+                {/* Informações do desafio */}
                 <View style={styles.challengeInfo}>
                   <Text style={[styles.challengeTitle, { color: theme.text }]}>
                     {challenge.title}
                   </Text>
 
+                  {/* Mostra XP, Concluído ou Bloqueado */}
                   <Text
                     style={[
                       styles.challengeXP,
@@ -470,6 +569,7 @@ export default function Dashboard() {
                       : `+${challenge.xp} XP`}
                   </Text>
 
+                  {/* Lista de tópicos do desafio */}
                   <View style={styles.topicsBox}>
                     {challenge.topics.map((topic, index) => (
                       <Text
@@ -477,7 +577,11 @@ export default function Dashboard() {
                         style={[
                           styles.topicText,
                           { color: theme.subtext },
+
+                          // O terceiro tópico é tratado como desafio final.
                           index === 2 && styles.finalChallengeText,
+
+                          // Se bloqueado, aplica estilo mais apagado.
                           bloqueado && styles.lockedTopicText,
                         ]}
                       >
@@ -488,6 +592,7 @@ export default function Dashboard() {
                   </View>
                 </View>
 
+                {/* Botão de iniciar desafio */}
                 <TouchableOpacity
                   disabled={bloqueado}
                   style={[
@@ -507,6 +612,7 @@ export default function Dashboard() {
         </View>
       ))}
 
+      {/* Botão principal para iniciar a próxima lição disponível */}
       <TouchableOpacity
         style={styles.primaryButton}
         onPress={() => {

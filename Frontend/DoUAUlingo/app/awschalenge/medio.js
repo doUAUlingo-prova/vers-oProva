@@ -1,6 +1,18 @@
+// Importa o contexto de autenticação.
+// Usado para acessar o usuário logado e atualizar o progresso.
 import { useAuth } from "../../contexts/AuthContext";
+
+// Importa recursos do Expo Router.
+// useLocalSearchParams pega o id vindo da rota.
+// useRouter permite navegar entre telas.
 import { useLocalSearchParams, useRouter } from "expo-router";
+
+// Hooks do React.
+// useMemo evita recalcular dados sem necessidade.
+// useState armazena estados da tela.
 import { useMemo, useState } from "react";
+
+// Componentes visuais do React Native.
 import {
   ScrollView,
   StyleSheet,
@@ -9,189 +21,218 @@ import {
   View,
 } from "react-native";
 
+// Contexto de tema, usado para aplicar modo claro/escuro.
 import { useTheme } from "../../contexts/ThemeContext";
 
-const API_URL = "https://x49aok4laf.execute-api.us-east-1.amazonaws.com";
+// URL do backend local.
+const API_URL = "http://localhost:8080";
 
-
+// Lista de desafios desta tela.
+// Aqui está o desafio AWS Médio.
 const challenges = [
   {
-  id: "2",
-  category: "AWS",
-  level: "Médio",
-  title: "EC2 com Servidor Web",
-  emoji: "🖥️",
-  xp: 120,
+    id: "2",
+    category: "AWS",
+    level: "Médio",
+    title: "EC2 com Servidor Web",
+    emoji: "🖥️",
+    xp: 120,
 
-  tutorial: [
-    {
-      title: "O que você vai aprender",
-      text:
-        "Neste módulo você aprenderá a criar e configurar uma instância EC2 na AWS para hospedar aplicações web. Além disso, entenderá como funcionam servidores web como Apache e Nginx, muito utilizados em ambientes profissionais para disponibilizar sites e sistemas na internet.\n\nAo final do módulo, você será capaz de subir uma máquina virtual na nuvem e hospedar sua própria página HTML acessível publicamente.",
-    },
-    {
-      title: "O que é uma instância EC2?",
-      text:
-        "O Amazon EC2 (Elastic Compute Cloud) é um serviço da AWS que permite criar servidores virtuais na nuvem.\n\nEssas máquinas virtuais podem ser utilizadas para:\n• Hospedar sites\n• Rodar APIs\n• Executar bancos de dados\n• Criar ambientes de desenvolvimento\n• Executar aplicações corporativas\n• Hospedar sistemas web\n\nA EC2 funciona como um computador remoto hospedado dentro da infraestrutura da AWS, permitindo total controle do sistema operacional, instalação de programas e gerenciamento do servidor.",
-    },
-    {
-      title: "Como funciona uma EC2?",
-      text:
-        "Ao criar uma instância EC2, você escolhe:\n\n• Sistema operacional\n• Capacidade de processamento\n• Memória RAM\n• Armazenamento\n• Região AWS\n• Regras de acesso e segurança\n\nExemplo:\n\nUsuário\n   ↓\nInternet\n   ↓\nEC2\n   ↓\nServidor Web (Apache/Nginx)\n   ↓\nSite HTML",
-    },
-    {
-      title: "O que é um Servidor Web?",
-      text:
-        "Um servidor web é um software responsável por receber requisições dos navegadores e entregar páginas web aos usuários.\n\nQuando alguém acessa um site, como www.meusite.com, o servidor web processa a solicitação e retorna arquivos como:\n\n• HTML\n• CSS\n• JavaScript\n• Imagens\n• APIs\n• Arquivos\n\nOs servidores web mais utilizados no mercado são Apache e Nginx.",
-    },
-    {
-      title: "Apache vs Nginx",
-      text:
-        "🔹 Apache\nO Apache HTTP Server é um dos servidores web mais tradicionais e populares do mundo.\n\nCaracterísticas:\n• Fácil configuração\n• Grande compatibilidade\n• Muito utilizado em aplicações PHP\n• Excelente documentação\n\n🔹 Nginx\nO Nginx é um servidor web moderno focado em alta performance e escalabilidade.\n\nCaracterísticas:\n• Alto desempenho\n• Baixo consumo de recursos\n• Excelente para aplicações modernas\n• Muito utilizado como proxy reverso",
-    },
-    {
-      title: "Criando uma EC2",
-      text:
-        "Passo 1 — Acessar o EC2\n\nEntre no Console AWS, pesquise por EC2 e abra o serviço.\n\nPasso 2 — Criar instância\n\nClique em Launch Instance e configure:\n• Nome da instância\n• Sistema operacional\n• Tipo da máquina\n• Chave SSH\n• Security Group",
-    },
-    {
-      title: "Security Group",
-      text:
-        "O Security Group funciona como um firewall da EC2.\n\nPara hospedar um site é necessário liberar:\n\n• Porta 22 — SSH\n• Porta 80 — HTTP\n• Porta 443 — HTTPS\n\nA porta 22 permite conexão remota via terminal. A porta 80 permite acesso ao site via HTTP. A porta 443 permite acesso seguro via HTTPS.",
-    },
-    {
-      title: "Conectando na EC2",
-      text:
-        "A conexão normalmente é feita via SSH:\n\nssh -i chave.pem ec2-user@IP_PUBLICO\n\nDepois da conexão, você terá acesso ao terminal Linux da máquina virtual.",
-    },
-    {
-      title: "Instalando Apache",
-      text:
-        "Em sistemas Amazon Linux:\n\nsudo yum update -y\nsudo yum install httpd -y\n\nIniciar serviço:\nsudo systemctl start httpd\n\nHabilitar inicialização automática:\nsudo systemctl enable httpd",
-    },
-    {
-      title: "Instalando Nginx",
-      text:
-        "Instalação:\n\nsudo yum install nginx -y\n\nIniciar serviço:\nsudo systemctl start nginx\n\nHabilitar inicialização automática:\nsudo systemctl enable nginx",
-    },
-    {
-      title: "Hospedando uma página HTML",
-      text:
-        "Após instalar e iniciar o servidor web, você pode criar ou enviar uma página HTML para a pasta padrão do servidor.\n\nDepois disso, basta acessar no navegador:\n\nhttp://IP_PUBLICO_DA_EC2\n\nO site ficará disponível pela internet.",
-    },
-    {
-      title: "Boas práticas de segurança",
-      text:
-        "Boas práticas importantes:\n\n• Nunca deixar SSH aberto para qualquer IP\n• Utilizar chaves SSH\n• Atualizar o sistema regularmente\n• Configurar HTTPS\n• Utilizar firewall corretamente\n• Monitorar acessos",
-    },
-  ],
+    // Conteúdo teórico do módulo.
+    tutorial: [
+      {
+        title: "O que você vai aprender",
+        text:
+          "Neste módulo você aprenderá a criar e configurar uma instância EC2 na AWS para hospedar aplicações web.",
+      },
+      {
+        title: "O que é uma instância EC2?",
+        text:
+          "O Amazon EC2 é um serviço da AWS que permite criar servidores virtuais na nuvem.",
+      },
+      {
+        title: "Como funciona uma EC2?",
+        text:
+          "Ao criar uma EC2, escolhemos sistema operacional, processamento, memória, armazenamento, região e regras de segurança.",
+      },
+      {
+        title: "O que é um Servidor Web?",
+        text:
+          "Um servidor web recebe requisições dos navegadores e entrega páginas como HTML, CSS, JavaScript e imagens.",
+      },
+      {
+        title: "Apache vs Nginx",
+        text:
+          "Apache é tradicional e fácil de configurar. Nginx é moderno, performático e muito usado como proxy reverso.",
+      },
+      {
+        title: "Criando uma EC2",
+        text:
+          "No console da AWS, acesse EC2, clique em Launch Instance e configure nome, sistema operacional, tipo da máquina, chave SSH e Security Group.",
+      },
+      {
+        title: "Security Group",
+        text:
+          "O Security Group funciona como firewall da EC2, controlando portas como 22 para SSH, 80 para HTTP e 443 para HTTPS.",
+      },
+      {
+        title: "Conectando na EC2",
+        text:
+          "A conexão normalmente é feita via SSH usando a chave PEM e o IP público da instância.",
+      },
+      {
+        title: "Instalando Apache",
+        text:
+          "No Amazon Linux, usamos comandos como sudo yum install httpd -y para instalar o Apache.",
+      },
+      {
+        title: "Instalando Nginx",
+        text:
+          "Também é possível instalar Nginx com sudo yum install nginx -y e iniciar o serviço.",
+      },
+      {
+        title: "Hospedando uma página HTML",
+        text:
+          "Após instalar o servidor web, criamos ou enviamos uma página HTML para a pasta padrão e acessamos pelo IP público da EC2.",
+      },
+      {
+        title: "Boas práticas de segurança",
+        text:
+          "Não deixar SSH aberto para qualquer IP, usar chaves SSH, atualizar o sistema, configurar HTTPS e monitorar acessos.",
+      },
+    ],
 
-  finalChallenge:
-    "Hospede uma página HTML em uma instância EC2 utilizando Apache ou Nginx.",
+    // Desafio prático.
+    finalChallenge:
+      "Hospede uma página HTML em uma instância EC2 utilizando Apache ou Nginx.",
 
-  requirements: [
-    "Criar uma instância EC2",
-    "Liberar a porta 80 no Security Group",
-    "Instalar Apache ou Nginx",
-    "Criar uma página HTML",
-    "Acessar o site publicamente pelo navegador",
-  ],
+    // Requisitos para concluir o desafio.
+    requirements: [
+      "Criar uma instância EC2",
+      "Liberar a porta 80 no Security Group",
+      "Instalar Apache ou Nginx",
+      "Criar uma página HTML",
+      "Acessar o site publicamente pelo navegador",
+    ],
 
-  expectedResult: [
-    "Criar servidores virtuais na AWS",
-    "Configurar ambientes Linux",
-    "Instalar servidores web",
-    "Hospedar aplicações simples",
-    "Publicar páginas HTML na internet",
-    "Entender a base da infraestrutura web em nuvem",
-  ],
+    // Resultado esperado de aprendizado.
+    expectedResult: [
+      "Criar servidores virtuais na AWS",
+      "Configurar ambientes Linux",
+      "Instalar servidores web",
+      "Hospedar aplicações simples",
+      "Publicar páginas HTML na internet",
+      "Entender a base da infraestrutura web em nuvem",
+    ],
 
-  questions: [
-    {
-      question: "O que é o Amazon EC2?",
-      options: [
-        "Um serviço da AWS para criar servidores virtuais na nuvem",
-        "Um serviço exclusivo para armazenar imagens",
-        "Uma ferramenta para editar código online",
-      ],
-      answer: "Um serviço da AWS para criar servidores virtuais na nuvem",
-    },
-    {
-      question: "Para que serve um servidor web?",
-      options: [
-        "Receber requisições e entregar páginas web aos usuários",
-        "Criar usuários IAM automaticamente",
-        "Armazenar senhas de banco de dados",
-      ],
-      answer: "Receber requisições e entregar páginas web aos usuários",
-    },
-    {
-      question: "Qual porta normalmente é usada para acesso HTTP?",
-      options: ["80", "22", "3306"],
-      answer: "80",
-    },
-    {
-      question: "Qual porta normalmente é usada para conexão SSH?",
-      options: ["22", "443", "8080"],
-      answer: "22",
-    },
-    {
-      question: "O que é um Security Group?",
-      options: [
-        "Um firewall que controla o tráfego da EC2",
-        "Um tipo de bucket público",
-        "Um serviço para criar interfaces mobile",
-      ],
-      answer: "Um firewall que controla o tráfego da EC2",
-    },
-    {
-      question: "Qual comando instala o Apache no Amazon Linux?",
-      options: [
-        "sudo yum install httpd -y",
-        "npm install apache",
-        "sudo apt create ec2",
-      ],
-      answer: "sudo yum install httpd -y",
-    },
-    {
-      question: "Depois de iniciar o servidor web, como o site pode ser acessado?",
-      options: [
-        "Pelo endereço http://IP_PUBLICO_DA_EC2",
-        "Somente pelo painel IAM",
-        "Apenas pelo terminal SSH",
-      ],
-      answer: "Pelo endereço http://IP_PUBLICO_DA_EC2",
-    },
-    {
-      question: "Qual é uma boa prática de segurança na EC2?",
-      options: [
-        "Não deixar SSH aberto para qualquer IP",
-        "Deixar todas as portas abertas",
-        "Compartilhar a chave PEM publicamente",
-      ],
-      answer: "Não deixar SSH aberto para qualquer IP",
-    },
-  ],
-}
+    // Perguntas da avaliação.
+    questions: [
+      {
+        question: "O que é o Amazon EC2?",
+        options: [
+          "Um serviço da AWS para criar servidores virtuais na nuvem",
+          "Um serviço exclusivo para armazenar imagens",
+          "Uma ferramenta para editar código online",
+        ],
+        answer: "Um serviço da AWS para criar servidores virtuais na nuvem",
+      },
+      {
+        question: "Para que serve um servidor web?",
+        options: [
+          "Receber requisições e entregar páginas web aos usuários",
+          "Criar usuários IAM automaticamente",
+          "Armazenar senhas de banco de dados",
+        ],
+        answer: "Receber requisições e entregar páginas web aos usuários",
+      },
+      {
+        question: "Qual porta normalmente é usada para acesso HTTP?",
+        options: ["80", "22", "3306"],
+        answer: "80",
+      },
+      {
+        question: "Qual porta normalmente é usada para conexão SSH?",
+        options: ["22", "443", "8080"],
+        answer: "22",
+      },
+      {
+        question: "O que é um Security Group?",
+        options: [
+          "Um firewall que controla o tráfego da EC2",
+          "Um tipo de bucket público",
+          "Um serviço para criar interfaces mobile",
+        ],
+        answer: "Um firewall que controla o tráfego da EC2",
+      },
+      {
+        question: "Qual comando instala o Apache no Amazon Linux?",
+        options: [
+          "sudo yum install httpd -y",
+          "npm install apache",
+          "sudo apt create ec2",
+        ],
+        answer: "sudo yum install httpd -y",
+      },
+      {
+        question: "Depois de iniciar o servidor web, como o site pode ser acessado?",
+        options: [
+          "Pelo endereço http://IP_PUBLICO_DA_EC2",
+          "Somente pelo painel IAM",
+          "Apenas pelo terminal SSH",
+        ],
+        answer: "Pelo endereço http://IP_PUBLICO_DA_EC2",
+      },
+      {
+        question: "Qual é uma boa prática de segurança na EC2?",
+        options: [
+          "Não deixar SSH aberto para qualquer IP",
+          "Deixar todas as portas abertas",
+          "Compartilhar a chave PEM publicamente",
+        ],
+        answer: "Não deixar SSH aberto para qualquer IP",
+      },
+    ],
+  },
 ];
 
+// Função para embaralhar as alternativas das questões.
 function shuffleArray(array) {
   return [...array].sort(() => Math.random() - 0.5);
 }
 
+// Componente principal da tela do desafio.
 export default function ChallengeScreen() {
+  // Pega o id recebido pela rota.
   const { id } = useLocalSearchParams();
+
+  // Permite navegar entre telas.
   const router = useRouter();
+
+  // Obtém as cores do tema atual.
   const { theme } = useTheme();
+
+  // Obtém usuário logado e função para atualizar seus dados.
   const { usuario, atualizarUsuario } = useAuth();
+
+  // Guarda as respostas escolhidas.
   const [selectedAnswers, setSelectedAnswers] = useState({});
+
+  // Guarda as perguntas que já foram travadas.
   const [lockedQuestions, setLockedQuestions] = useState({});
+
+  // Controla as vidas do usuário.
   const [lives, setLives] = useState(3);
+
+  // Indica se a avaliação já foi enviada.
   const [submitted, setSubmitted] = useState(false);
+
+  // Indica se o progresso está sendo salvo.
   const [saving, setSaving] = useState(false);
 
+  // Busca o desafio correspondente ao id.
   const challenge = challenges.find((item) => item.id === String(id));
 
+  // Embaralha as alternativas das questões.
   const shuffledQuestions = useMemo(() => {
     if (!challenge) return [];
 
@@ -201,6 +242,7 @@ export default function ChallengeScreen() {
     }));
   }, [challenge]);
 
+  // Se o desafio não existir, mostra erro.
   if (!challenge) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
@@ -209,35 +251,49 @@ export default function ChallengeScreen() {
         </Text>
 
         <TouchableOpacity onPress={() => router.back()}>
-  <Text style={styles.backText}>← Voltar</Text>
-</TouchableOpacity>
+          <Text style={styles.backText}>← Voltar</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
+  // Total de perguntas.
   const totalQuestions = shuffledQuestions.length;
 
+  // Conta respostas corretas.
   const correctAnswers = shuffledQuestions.filter(
     (item, index) => selectedAnswers[index] === item.answer
   ).length;
 
+  // Conta respostas dadas.
   const answeredQuestions = Object.keys(selectedAnswers).length;
+
+  // Verifica se respondeu tudo.
   const allAnswered = answeredQuestions === totalQuestions;
 
+  // Calcula porcentagem de acerto.
   const percentage = Math.round((correctAnswers / totalQuestions) * 100);
+
+  // Define aprovação com mínimo de 75%.
   const approved = percentage >= 75;
 
+  // Função chamada ao selecionar alternativa.
   const selectAnswer = (questionIndex, option) => {
+    // Impede alteração se já enviou ou se a questão está travada.
     if (submitted || lockedQuestions[questionIndex]) return;
 
     const question = shuffledQuestions[questionIndex];
+
+    // Verifica se a opção está correta.
     const isCorrect = option === question.answer;
 
+    // Salva resposta escolhida.
     setSelectedAnswers((prev) => ({
       ...prev,
       [questionIndex]: option,
     }));
 
+    // Se acertou, trava a pergunta.
     if (isCorrect) {
       setLockedQuestions((prev) => ({
         ...prev,
@@ -247,32 +303,40 @@ export default function ChallengeScreen() {
       return;
     }
 
+    // Se errou, perde uma vida.
     if (lives > 0) {
       setLives((prev) => prev - 1);
       return;
     }
 
+    // Se acabaram as vidas, trava a questão.
     setLockedQuestions((prev) => ({
       ...prev,
       [questionIndex]: true,
     }));
   };
 
+  // Função para enviar avaliação.
   const submitChallenge = async () => {
+    // Impede envio se faltam respostas, se já enviou ou se está salvando.
     if (!allAnswered || submitted || saving) return;
 
+    // Marca como enviado.
     setSubmitted(true);
 
+    // Se não aprovado, não salva progresso.
     if (!approved) return;
 
     try {
       setSaving(true);
 
+      // Verifica se há usuário logado.
       if (!usuario?.email) {
         console.log("Usuário não encontrado para salvar progresso.");
         return;
       }
 
+      // Envia para o backend que o desafio foi concluído.
       const response = await fetch(
         `${API_URL}/progresso/concluir?email=${encodeURIComponent(
           usuario.email
@@ -282,12 +346,14 @@ export default function ChallengeScreen() {
         }
       );
 
+      // Se o backend retornar erro.
       if (!response.ok) {
         const erro = await response.text();
         console.log("Erro ao salvar progresso:", erro);
         return;
       }
 
+      // Atualiza dados do usuário como XP, nível e streak.
       if (atualizarUsuario) {
         await atualizarUsuario();
       }
@@ -300,12 +366,13 @@ export default function ChallengeScreen() {
     }
   };
 
+  // Volta para o Dashboard atualizando dados antes.
   const voltarDashboard = async () => {
     if (atualizarUsuario) {
       await atualizarUsuario();
     }
 
-    router.replace("/(tabs)/dashboard");
+    router.replace("(tabs)/dashboard");
   };
 
   return (
@@ -313,10 +380,12 @@ export default function ChallengeScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
     >
+      {/* Botão voltar */}
       <TouchableOpacity onPress={() => router.back()}>
         <Text style={styles.backText}>← Voltar</Text>
       </TouchableOpacity>
 
+      {/* Card principal do desafio */}
       <View style={[styles.heroCard, { backgroundColor: theme.card }]}>
         <Text style={styles.emoji}>{challenge.emoji}</Text>
 
@@ -331,6 +400,7 @@ export default function ChallengeScreen() {
         <Text style={styles.xp}>+{challenge.xp} XP</Text>
       </View>
 
+      {/* Status de vidas e perguntas respondidas */}
       <View style={styles.statusRow}>
         <View style={styles.lifeCard}>
           <Text style={styles.lifeText}>Vidas: {"❤️".repeat(lives)}</Text>
@@ -347,6 +417,7 @@ export default function ChallengeScreen() {
         Tutorial
       </Text>
 
+      {/* Lista o conteúdo teórico */}
       {challenge.tutorial.map((topic, index) => (
         <View
           key={index}
@@ -364,12 +435,14 @@ export default function ChallengeScreen() {
         </View>
       ))}
 
+      {/* Desafio prático */}
       <View style={styles.finalCard}>
         <Text style={styles.finalEmoji}>🎯</Text>
         <Text style={styles.finalTitle}>Desafio prático</Text>
         <Text style={styles.finalText}>{challenge.finalChallenge}</Text>
       </View>
 
+      {/* Requisitos */}
       <View style={[styles.topicCard, { backgroundColor: theme.card }]}>
         <Text style={[styles.topicTitle, { color: theme.text }]}>
           Requisitos
@@ -395,6 +468,7 @@ export default function ChallengeScreen() {
         resposta ficar travada.
       </Text>
 
+      {/* Lista de perguntas */}
       {shuffledQuestions.map((item, questionIndex) => (
         <View
           key={questionIndex}
@@ -404,6 +478,7 @@ export default function ChallengeScreen() {
             {questionIndex + 1}. {item.question}
           </Text>
 
+          {/* Alternativas da pergunta */}
           {item.options.map((option) => {
             const selected = selectedAnswers[questionIndex] === option;
             const isCorrect = option === item.answer;
@@ -428,12 +503,14 @@ export default function ChallengeScreen() {
             );
           })}
 
+          {/* Mostra quando a resposta foi travada */}
           {lockedQuestions[questionIndex] && (
             <Text style={styles.lockedText}>Resposta travada 🔒</Text>
           )}
         </View>
       ))}
 
+      {/* Resultado da avaliação */}
       {submitted && (
         <View
           style={[
@@ -459,36 +536,37 @@ export default function ChallengeScreen() {
         </View>
       )}
 
+      {/* Botão de envio */}
       <TouchableOpacity
-  disabled={!allAnswered || submitted}
-  style={[
-    styles.button,
-    (!allAnswered || submitted) && styles.disabledButton,
-  ]}
-  onPress={submitChallenge}
->
-  <Text style={styles.buttonText}>
-    {submitted
-      ? "AVALIAÇÃO ENVIADA"
-      : allAnswered
-      ? "ENVIAR RESPOSTAS"
-      : "RESPONDA TODAS AS QUESTÕES"}
-  </Text>
-</TouchableOpacity>
+        disabled={!allAnswered || submitted}
+        style={[
+          styles.button,
+          (!allAnswered || submitted) && styles.disabledButton,
+        ]}
+        onPress={submitChallenge}
+      >
+        <Text style={styles.buttonText}>
+          {submitted
+            ? "AVALIAÇÃO ENVIADA"
+            : allAnswered
+            ? "ENVIAR RESPOSTAS"
+            : "RESPONDA TODAS AS QUESTÕES"}
+        </Text>
+      </TouchableOpacity>
 
-{submitted && (
-  <TouchableOpacity
-    style={styles.backBottomButton}
-    onPress={voltarDashboard}
-  >
-    <Text style={styles.backBottomText}>
-      ← Voltar ao Dashboard
-    </Text>
-  </TouchableOpacity>
-)}
-
-</ScrollView>
-);
+      {/* Botão para voltar após envio */}
+      {submitted && (
+        <TouchableOpacity
+          style={styles.backBottomButton}
+          onPress={voltarDashboard}
+        >
+          <Text style={styles.backBottomText}>
+            ← Voltar ao Dashboard
+          </Text>
+        </TouchableOpacity>
+      )}
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({

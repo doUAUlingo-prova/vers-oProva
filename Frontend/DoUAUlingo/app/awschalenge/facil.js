@@ -1,5 +1,14 @@
+// Importa recursos do Expo Router.
+// useLocalSearchParams pega parâmetros da URL, como o id do desafio.
+// useRouter permite navegar entre telas.
 import { useLocalSearchParams, useRouter } from "expo-router";
+
+// Importa hooks do React.
+// useMemo memoriza valores calculados.
+// useState armazena estados da tela.
 import { useMemo, useState } from "react";
+
+// Importa componentes visuais do React Native.
 import {
   ScrollView,
   StyleSheet,
@@ -8,11 +17,17 @@ import {
   View,
 } from "react-native";
 
+// Contexto de tema, usado para aplicar modo claro/escuro.
 import { useTheme } from "../../contexts/ThemeContext";
+
+// Contexto de autenticação, usado para pegar o usuário logado e atualizar seus dados.
 import { useAuth } from "../../contexts/AuthContext";
 
-const API_URL = "https://x49aok4laf.execute-api.us-east-1.amazonaws.com";
+// URL do backend local.
+const API_URL = "http://localhost:8080";
 
+// Lista de desafios desta tela.
+// Aqui temos o desafio AWS Fácil.
 const challenges = [
   {
     id: "1",
@@ -21,6 +36,8 @@ const challenges = [
     title: "Criando um Bucket S3",
     emoji: "☁️",
     xp: 50,
+
+    // Conteúdo explicativo antes da avaliação.
     tutorial: [
       {
         title: "O que é o Amazon S3?",
@@ -43,13 +60,19 @@ const challenges = [
         text: "Evite deixar buckets públicos sem necessidade. Use políticas IAM, criptografia, versionamento e controle de permissões.",
       },
     ],
+
+    // Desafio prático apresentado ao usuário.
     finalChallenge:
       "Crie um Bucket S3 e envie 3 arquivos diferentes para dentro dele.",
+
+    // Requisitos que o usuário deve cumprir.
     requirements: [
       "Criar um bucket",
       "Enviar 3 arquivos diferentes",
       "Compartilhar print do bucket criado",
     ],
+
+    // Questões da avaliação.
     questions: [
       {
         question: "O que é o Amazon S3?",
@@ -88,123 +111,185 @@ const challenges = [
   },
 ];
 
+// Função que embaralha as alternativas.
+// Isso faz com que as opções apareçam em ordem aleatória.
 function shuffleArray(array) {
   return [...array].sort(() => Math.random() - 0.5);
 }
 
+// Tela principal do desafio.
 export default function ChallengeScreen() {
+  // Pega o id enviado pela rota.
   const { id } = useLocalSearchParams();
+
+  // Permite navegar entre telas.
   const router = useRouter();
+
+  // Obtém as cores do tema atual.
   const { theme } = useTheme();
+
+  // Obtém usuário logado e função para atualizar os dados dele.
   const { usuario, atualizarUsuario } = useAuth();
 
+  // Armazena as respostas selecionadas pelo usuário.
   const [selectedAnswers, setSelectedAnswers] = useState({});
+
+  // Armazena quais perguntas já foram travadas.
   const [lockedQuestions, setLockedQuestions] = useState({});
+
+  // Controla as vidas do usuário.
   const [lives, setLives] = useState(3);
+
+  // Controla se a avaliação já foi enviada.
   const [submitted, setSubmitted] = useState(false);
+
+  // Controla se o app está salvando progresso.
   const [saving, setSaving] = useState(false);
 
+  // Procura o desafio pelo id recebido na rota.
   const challenge = challenges.find((item) => item.id === String(id));
 
+  // Embaralha as alternativas das perguntas.
+  // useMemo evita embaralhar novamente a cada renderização.
   const shuffledQuestions = useMemo(() => {
     if (!challenge) return [];
+
     return challenge.questions.map((question) => ({
       ...question,
       options: shuffleArray(question.options),
     }));
   }, [challenge]);
 
+  // Caso o desafio não seja encontrado.
   if (!challenge) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <Text style={[styles.errorTitle, { color: theme.text }]}>
           Desafio não encontrado 😵
         </Text>
-        <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
+
+        <TouchableOpacity onPress={() => router.replace("(tabs)/dashboard")}>
           <Text style={styles.backText}>← Voltar</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  // Total de perguntas.
   const totalQuestions = shuffledQuestions.length;
+
+  // Conta quantas respostas estão corretas.
   const correctAnswers = shuffledQuestions.filter(
     (item, index) => selectedAnswers[index] === item.answer
   ).length;
+
+  // Conta quantas perguntas já foram respondidas.
   const answeredQuestions = Object.keys(selectedAnswers).length;
+
+  // Verifica se todas as perguntas foram respondidas.
   const allAnswered = answeredQuestions === totalQuestions;
+
+  // Calcula a nota em porcentagem.
   const percentage = Math.round((correctAnswers / totalQuestions) * 100);
+
+  // Define aprovação mínima de 75%.
   const approved = percentage >= 75;
 
+  // Função chamada quando o usuário escolhe uma alternativa.
   const selectAnswer = (questionIndex, option) => {
+    // Impede responder se já enviou ou se a pergunta está travada.
     if (submitted || lockedQuestions[questionIndex]) return;
 
     const question = shuffledQuestions[questionIndex];
+
+    // Verifica se a alternativa escolhida é correta.
     const isCorrect = option === question.answer;
 
-    setSelectedAnswers((prev) => ({ ...prev, [questionIndex]: option }));
+    // Salva a resposta selecionada.
+    setSelectedAnswers((prev) => ({
+      ...prev,
+      [questionIndex]: option,
+    }));
 
+    // Se estiver correta, trava a pergunta.
     if (isCorrect) {
-      setLockedQuestions((prev) => ({ ...prev, [questionIndex]: true }));
+      setLockedQuestions((prev) => ({
+        ...prev,
+        [questionIndex]: true,
+      }));
       return;
     }
 
+    // Se estiver errada, perde uma vida.
     if (lives > 0) {
       setLives((prev) => prev - 1);
       return;
     }
 
-    setLockedQuestions((prev) => ({ ...prev, [questionIndex]: true }));
+    // Se não houver mais vidas, trava a questão.
+    setLockedQuestions((prev) => ({
+      ...prev,
+      [questionIndex]: true,
+    }));
   };
 
+  // Função chamada ao enviar respostas.
   const submitChallenge = async () => {
-  if (!allAnswered || submitted || saving) return;
+    // Impede envio incompleto, duplicado ou durante salvamento.
+    if (!allAnswered || submitted || saving) return;
 
-  setSubmitted(true);
+    // Marca a avaliação como enviada.
+    setSubmitted(true);
 
-  if (!approved) return;
+    // Se não foi aprovado, não salva progresso.
+    if (!approved) return;
 
-  try {
-    setSaving(true);
+    try {
+      setSaving(true);
 
-    if (!usuario?.email) {
-      console.log("Usuário não encontrado para salvar progresso.");
-      return;
-    }
-
-    const response = await fetch(
-      `${API_URL}/progresso/concluir?email=${encodeURIComponent(
-        usuario.email
-      )}&desafioId=${challenge.id}`,
-      {
-        method: "POST",
+      // Verifica se existe usuário logado.
+      if (!usuario?.email) {
+        console.log("Usuário não encontrado para salvar progresso.");
+        return;
       }
-    );
 
-    if (!response.ok) {
-      const erro = await response.text();
-      console.log("Erro ao salvar progresso:", erro);
-      return;
+      // Envia para o backend que o desafio foi concluído.
+      const response = await fetch(
+        `${API_URL}/progresso/concluir?email=${encodeURIComponent(
+          usuario.email
+        )}&desafioId=${challenge.id}`,
+        {
+          method: "POST",
+        }
+      );
+
+      // Trata erro ao salvar progresso.
+      if (!response.ok) {
+        const erro = await response.text();
+        console.log("Erro ao salvar progresso:", erro);
+        return;
+      }
+
+      // Atualiza usuário, XP, nível e streak.
+      if (atualizarUsuario) {
+        await atualizarUsuario();
+      }
+
+      console.log("Progresso salvo com sucesso!");
+    } catch (error) {
+      console.log("Erro ao concluir desafio:", error);
+    } finally {
+      setSaving(false);
     }
+  };
 
-    if (atualizarUsuario) {
-      await atualizarUsuario();
-    }
-
-    console.log("Progresso salvo com sucesso!");
-  } catch (error) {
-    console.log("Erro ao concluir desafio:", error);
-  } finally {
-    setSaving(false);
-  }
-};
-
+  // Função para voltar ao Dashboard.
   const voltarDashboard = async () => {
     if (atualizarUsuario) {
       await atualizarUsuario();
     }
 
-    router.replace("/(tabs)/dashboard");
+    router.replace("(tabs)/dashboard");
   };
 
   return (
@@ -212,25 +297,32 @@ export default function ChallengeScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
     >
-      <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
+      {/* Botão voltar */}
+      <TouchableOpacity onPress={() => router.replace("(tabs)/dashboard")}>
         <Text style={styles.backText}>← Voltar</Text>
       </TouchableOpacity>
 
+      {/* Card principal do desafio */}
       <View style={[styles.heroCard, { backgroundColor: theme.card }]}>
         <Text style={styles.emoji}>{challenge.emoji}</Text>
+
         <Text style={[styles.category, { color: theme.subtext }]}>
           {challenge.category} • {challenge.level}
         </Text>
+
         <Text style={[styles.title, { color: theme.text }]}>
           {challenge.title}
         </Text>
+
         <Text style={styles.xp}>+{challenge.xp} XP</Text>
       </View>
 
+      {/* Linha com vidas e perguntas respondidas */}
       <View style={styles.statusRow}>
         <View style={styles.lifeCard}>
           <Text style={styles.lifeText}>Vidas: {"❤️".repeat(lives)}</Text>
         </View>
+
         <View style={styles.lifeCard}>
           <Text style={styles.lifeText}>
             Respondidas: {answeredQuestions}/{totalQuestions}
@@ -238,6 +330,7 @@ export default function ChallengeScreen() {
         </View>
       </View>
 
+      {/* Tutorial */}
       <Text style={[styles.sectionTitle, { color: theme.text }]}>Tutorial</Text>
 
       {challenge.tutorial.map((topic, index) => (
@@ -246,25 +339,30 @@ export default function ChallengeScreen() {
           style={[styles.topicCard, { backgroundColor: theme.card }]}
         >
           <Text style={styles.topicNumber}>0{index + 1}</Text>
+
           <Text style={[styles.topicTitle, { color: theme.text }]}>
             {topic.title}
           </Text>
+
           <Text style={[styles.topicText, { color: theme.subtext }]}>
             {topic.text}
           </Text>
         </View>
       ))}
 
+      {/* Desafio prático */}
       <View style={styles.finalCard}>
         <Text style={styles.finalEmoji}>🎯</Text>
         <Text style={styles.finalTitle}>Desafio prático</Text>
         <Text style={styles.finalText}>{challenge.finalChallenge}</Text>
       </View>
 
+      {/* Requisitos */}
       <View style={[styles.topicCard, { backgroundColor: theme.card }]}>
         <Text style={[styles.topicTitle, { color: theme.text }]}>
           Requisitos
         </Text>
+
         {challenge.requirements.map((item, index) => (
           <Text key={index} style={[styles.topicText, { color: theme.subtext }]}>
             ✅ {item}
@@ -272,6 +370,7 @@ export default function ChallengeScreen() {
         ))}
       </View>
 
+      {/* Avaliação */}
       <Text style={[styles.sectionTitle, { color: theme.text }]}>Avaliação</Text>
 
       <Text style={[styles.helpText, { color: theme.subtext }]}>
@@ -279,6 +378,7 @@ export default function ChallengeScreen() {
         aleatória.
       </Text>
 
+      {/* Renderiza as perguntas */}
       {shuffledQuestions.map((item, questionIndex) => (
         <View
           key={questionIndex}
@@ -288,6 +388,7 @@ export default function ChallengeScreen() {
             {questionIndex + 1}. {item.question}
           </Text>
 
+          {/* Renderiza as alternativas */}
           {item.options.map((option) => {
             const selected = selectedAnswers[questionIndex] === option;
             const isCorrect = option === item.answer;
@@ -299,10 +400,20 @@ export default function ChallengeScreen() {
                 disabled={submitted || locked}
                 style={[
                   styles.optionButton,
+
+                  // Alternativa selecionada.
                   selected && styles.selectedOption,
+
+                  // Se estiver selecionada, travada e correta.
                   selected && locked && isCorrect && styles.correctOption,
+
+                  // Se estiver selecionada, travada e errada.
                   selected && locked && !isCorrect && styles.wrongOption,
+
+                  // Após envio, marca correta.
                   submitted && selected && isCorrect && styles.correctOption,
+
+                  // Após envio, marca errada.
                   submitted && selected && !isCorrect && styles.wrongOption,
                 ]}
                 onPress={() => selectAnswer(questionIndex, option)}
@@ -312,12 +423,14 @@ export default function ChallengeScreen() {
             );
           })}
 
+          {/* Indica pergunta travada */}
           {lockedQuestions[questionIndex] && (
             <Text style={styles.lockedText}>Resposta travada 🔒</Text>
           )}
         </View>
       ))}
 
+      {/* Resultado final */}
       {submitted && (
         <View
           style={[
@@ -328,10 +441,13 @@ export default function ChallengeScreen() {
           <Text style={styles.resultTitle}>
             {approved ? "Aprovado! 🏆" : "Reprovado 😵"}
           </Text>
+
           <Text style={styles.resultInfo}>
             Acertos: {correctAnswers}/{totalQuestions}
           </Text>
+
           <Text style={styles.resultInfo}>Nota: {percentage}%</Text>
+
           <Text style={styles.resultDescription}>
             {approved
               ? `Boa! Você ganhou ${challenge.xp} XP.`
@@ -340,6 +456,7 @@ export default function ChallengeScreen() {
         </View>
       )}
 
+      {/* Botão de envio ou botão para voltar */}
       {!submitted ? (
         <TouchableOpacity
           disabled={!allAnswered}

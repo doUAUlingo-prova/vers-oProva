@@ -1,0 +1,8 @@
+node_modules/
+target/
+.env
+.vscode/
+.expo/
+dist/
+build/
+.DS_Store
