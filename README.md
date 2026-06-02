@@ -232,6 +232,25 @@ Com isso, o frontend sabe quais desafios já foram concluídos.
 
 ---
 
+## Estrutura
+O projeto está dividido em duas partes: Backend e Frontend.
+
+O Backend é a parte da API, feita em Java/Spring Boot. Ele fica responsável pelas regras do sistema, banco de dados, autenticação e envio de informações para o aplicativo. Arquivos como pom.xml, Dockerfile e docker-compose.yml servem para configurar dependências e executar o backend.
+
+O Frontend é o aplicativo mobile feito em Expo/React Native. A pasta principal é DoUAUlingo, onde ficam as telas, imagens, componentes e configurações do app.
+
+Dentro do Expo, a pasta mais importante é a app, porque ela organiza as telas e rotas. Arquivos como index.js, login.js, register.js e forgot-password.js representam telas do aplicativo. A pasta (tabs) guarda as telas com navegação por abas.
+
+As pastas components, contexts e assets ajudam na organização: components guarda partes reutilizáveis da interface, contexts guarda dados globais do app, e assets guarda imagens e ícones.
+
 ## Resumo
 
 O frontend não acessa o banco de dados diretamente. Ele envia requisições para o backend Spring Boot, e o backend é responsável por validar, processar e salvar as informações no PostgreSQL.
+
+O README apresenta o projeto doUAUlingo, um aplicativo gamificado de aprendizado desenvolvido com Expo/React Native no frontend e Java Spring Boot no backend.
+
+Ele explica os integrantes do grupo, os programas necessários para rodar o projeto, como VS Code, Java JDK 17, Docker, Node.js e Expo Go, além do passo a passo para iniciar o backend, o banco PostgreSQL via Docker e o frontend pelo Expo.
+
+Também mostra que o frontend se conecta ao backend por meio de requisições HTTP usando fetch(), acessando a API em http://localhost:8080. O app utiliza endpoints para login, cadastro, busca de dados do usuário, progresso dos desafios e atualização de XP, nível e sequência.
+
+Resumindo, o README serve como um guia para instalar, executar e entender a comunicação entre o app Expo, o backend Spring Boot e o banco PostgreSQL.
